@@ -1,0 +1,64 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "decisionlab"
+version = "0.1.0"
+description = "Reproducible analysis of aggregate human risky-choice behavior"
+requires-python = ">=3.12"
+dependencies = [
+  "joblib==1.5.3",
+  "matplotlib==3.11.1",
+  "numpy==2.5.2",
+  "scikit-learn==1.9.0",
+  "streamlit==1.62.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==9.1.1",
+  "ruff==0.16.5",
+]
+
+[project.scripts]
+decisionlab-fetch-data = "decisionlab.data.fetch:main"
+decisionlab-validate-data = "decisionlab.data.validation:main"
+decisionlab-eda = "decisionlab.analysis.eda:main"
+decisionlab-build-features = "decisionlab.features.behavioral:main"
+decisionlab-create-splits = "decisionlab.evaluation.protocol:main"
+decisionlab-run-baselines = "decisionlab.experiments.baselines:main"
+decisionlab-select-model = "decisionlab.experiments.model_selection:main"
+decisionlab-behavioral-analysis = "decisionlab.analysis.behavioral:main"
+decisionlab-error-analysis = "decisionlab.analysis.errors:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+minversion = "9.0"
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = ["--strict-config", "--strict-markers"]
+xfail_strict = true
+filterwarnings = [
+  "ignore:Setting the shape on a NumPy array has been deprecated:DeprecationWarning:joblib.numpy_pickle",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+extend-exclude = ["artifacts", "data", "reports/figures", "src/decisionlab.egg-info"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# The EDA module embeds generated Markdown prose whose source lines are intentionally long.
+"src/decisionlab/analysis/eda.py" = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

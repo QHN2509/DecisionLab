@@ -1,0 +1,23 @@
+{
+  "experiment_name": "validation_baselines_v1",
+  "evaluation_split": "validation",
+  "feature_set": "engineered_design_oracle_v1",
+  "random_seed": 20260827,
+  "ridge": {
+    "alpha": 1.0,
+    "fit_intercept": true,
+    "standardize": true,
+    "prediction_postprocessing": "explicit_clip_0_1"
+  },
+  "decision_tree": {
+    "criterion": "squared_error",
+    "max_depth": 6,
+    "min_samples_leaf": 50,
+    "prediction_postprocessing": "none"
+  },
+  "expected_value_heuristic": {
+    "tie_prediction": 0.5,
+    "uses_oracle_probabilities_under_ambiguity": true
+  }
+}
+

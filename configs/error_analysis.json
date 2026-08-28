@@ -1,0 +1,14 @@
+{
+  "analysis_name": "selected_model_systematic_error_analysis_v1",
+  "evaluation_split": "validation",
+  "selected_model_experiment": "grouped_model_selection_v1",
+  "random_seed": 20260828,
+  "cluster_bootstrap_repeats": 1000,
+  "confidence_level": 0.95,
+  "largest_errors_to_save": 25,
+  "representative_cases_per_category": 3,
+  "near_equal_ev_absolute_difference": 1.0,
+  "extreme_ev_training_absolute_quantile": 0.90,
+  "approximately_half_half_width": 0.05,
+  "strong_consensus_half_width": 0.30
+}

@@ -1,0 +1,33 @@
+{
+  "feature_names": [
+    "expected_value_a",
+    "expected_value_b_oracle",
+    "expected_value_difference_b_minus_a_oracle",
+    "payoff_range_a",
+    "payoff_range_b",
+    "payoff_range_difference_b_minus_a",
+    "maximum_payoff_difference_b_minus_a",
+    "minimum_payoff_difference_b_minus_a",
+    "payoff_std_a",
+    "payoff_std_b_oracle",
+    "payoff_std_difference_b_minus_a_oracle",
+    "best_payoff_probability_a",
+    "best_payoff_probability_b_oracle",
+    "best_payoff_probability_difference_b_minus_a_oracle",
+    "loss_probability_a",
+    "loss_probability_b_oracle",
+    "loss_probability_difference_b_minus_a_oracle",
+    "ambiguity_indicator",
+    "feedback_indicator",
+    "lottery_shape_b_undefined",
+    "lottery_shape_b_symmetric",
+    "lottery_shape_b_right_skewed",
+    "lottery_shape_b_left_skewed",
+    "correlation_negative",
+    "correlation_zero",
+    "correlation_positive",
+    "expected_value_difference_oracle_x_feedback",
+    "expected_value_difference_oracle_x_ambiguity"
+  ],
+  "feature_set": "engineered_design_oracle_v1"
+}

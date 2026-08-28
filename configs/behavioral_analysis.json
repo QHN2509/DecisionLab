@@ -1,0 +1,23 @@
+{
+  "analysis_name": "selected_model_behavioral_analysis_v1",
+  "evaluation_split": "validation",
+  "selected_model_experiment": "grouped_model_selection_v1",
+  "random_seed": 20260827,
+  "permutation_repeats": 10,
+  "relationship_quantile_bins": 10,
+  "expected_value_near_tie_threshold": 1.0,
+  "participant_count_split": "training_median",
+  "normative_benchmark": {
+    "strong_expected_value_difference": 5.0,
+    "human_favor_b_threshold": 0.60,
+    "human_favor_a_threshold": 0.40,
+    "highly_divided_half_width": 0.05,
+    "successful_prediction_max_absolute_error": 0.08,
+    "failed_prediction_min_absolute_error": 0.15,
+    "examples_per_category": 5
+  },
+  "shap": {
+    "enabled": false,
+    "reason": "Permutation importance and behaviorally coherent sensitivity analyses answer the prespecified questions without adding the optional SHAP dependency."
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "default_scenario": {
+    "high_payoff_a": 26.0,
+    "high_probability_a": 0.95,
+    "low_payoff_a": -1.0,
+    "sublottery_mean_b": 23.0,
+    "sublottery_probability_b": 0.05,
+    "low_payoff_b": 21.0,
+    "lottery_shape_b": 0,
+    "lottery_outcomes_b": 1,
+    "ambiguity": false,
+    "feedback": false,
+    "correlation": 0
+  },
+  "input_limits": {
+    "high_payoff_a": [-10.0, 118.0],
+    "low_payoff_a": [-50.0, 30.0],
+    "sublottery_mean_b": [-18.0, 119.0],
+    "low_payoff_b": [-50.0, 41.0],
+    "probability": [0.01, 1.0],
+    "lottery_outcomes_b": [2, 8]
+  }
+}

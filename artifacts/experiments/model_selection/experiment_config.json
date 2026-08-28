@@ -1,0 +1,64 @@
+{
+  "cross_validation": {
+    "folds": 5,
+    "primary_metric": "mae",
+    "shuffle_groups": true
+  },
+  "evaluation_split": "validation",
+  "experiment_name": "grouped_model_selection_v1",
+  "feature_set": "engineered_design_oracle_v1",
+  "gradient_boosting": {
+    "complexity_rank": 3,
+    "fixed": {
+      "loss": "squared_error",
+      "min_samples_leaf": 20
+    },
+    "grid": {
+      "learning_rate": [
+        0.03,
+        0.07
+      ],
+      "max_depth": [
+        2,
+        3
+      ],
+      "n_estimators": [
+        100,
+        200
+      ]
+    },
+    "interpretability": "moderate-low: sequential trees support global importance but interact nonlinearly"
+  },
+  "random_forest": {
+    "complexity_rank": 2,
+    "fixed": {
+      "criterion": "squared_error",
+      "n_estimators": 200,
+      "n_jobs": -1
+    },
+    "grid": {
+      "max_depth": [
+        8,
+        null
+      ],
+      "max_features": [
+        "sqrt",
+        0.75
+      ],
+      "min_samples_leaf": [
+        5,
+        20
+      ]
+    },
+    "interpretability": "moderate: impurity importances and partial dependence are available"
+  },
+  "random_seed": 20260827,
+  "selection": {
+    "rule": "lowest_complexity_within_validation_mae_tolerance_then_cv_mae_then_cv_std",
+    "validation_mae_tolerance": 0.005
+  },
+  "xgboost": {
+    "enabled": false,
+    "reason": "Excluded from this milestone because it adds a large optional dependency and overlaps the tested gradient-boosting role; revisit only if sklearn ensembles leave a material performance gap."
+  }
+}
