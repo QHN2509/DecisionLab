@@ -96,6 +96,19 @@ def test_condition_sensitivity_updates_binary_interaction() -> None:
     assert feedback_on["mean_difference_from_reference"] == pytest.approx(0.05)
 
 
+def test_condition_sensitivity_excludes_dependent_lottery_shape_counterfactuals() -> None:
+    names = _all_feature_names()
+    features = np.zeros((2, len(names)))
+
+    rows = condition_sensitivity_rows(
+        lambda values: np.full(values.shape[0], 0.5),
+        features,
+        names,
+    )
+
+    assert {row["dimension"] for row in rows} == {"feedback", "ambiguity", "correlation"}
+
+
 def test_normative_cases_apply_declared_benchmark_and_prediction_rules() -> None:
     names = [
         "expected_value_a",

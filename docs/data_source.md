@@ -19,5 +19,6 @@ The CSV contains 14,568 condition rows but 13,006 problem IDs. Some problems hav
 
 Peterson, J. C., Bourgin, D. D., Agrawal, M., Reichman, D., & Griffiths, T. L. (2021). Using large-scale experiments and machine learning to discover theories of human decision-making. *Science, 372*(6547), 1209–1214. <https://doi.org/10.1126/science.abe2629>
 
-Also cite the dataset repository as requested by its maintainers. See the upstream README for its additional Bourgin et al. (2019) citation.
+Bourgin, D. D., Peterson, J. C., Reichman, D., Russell, S. J., & Griffiths, T. L. (2019). Cognitive model priors for predicting human decisions. In *Proceedings of the 36th International Conference on Machine Learning*, *Proceedings of Machine Learning Research, 97*, 5133–5141. <https://proceedings.mlr.press/v97/peterson19a.html>
 
+Both papers are requested by the choices13k maintainers. The repository is pinned to the revision documented above.

@@ -102,6 +102,25 @@ def test_official_analysis_reports_describe_the_recorded_oof_scope() -> None:
     assert "post-selection analysis on validation data" not in errors
 
 
+def test_documented_provenance_and_dataset_citations_match_tracked_contract() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    data_source = Path("docs/data_source.md").read_text(encoding="utf-8")
+    provenance = Path("docs/provenance.md").read_text(encoding="utf-8")
+
+    for document in (readme, data_source):
+        assert "Using large-scale experiments and machine learning" in document
+        assert "Cognitive model priors for predicting human decisions" in document
+        assert "https://proceedings.mlr.press/v97/peterson19a.html" in document
+
+    assert "`artifacts/manifests/eda_provenance.json`" in provenance
+    assert Path("artifacts/manifests/eda_provenance.json").is_file()
+    assert (
+        "does not claim that an\nofficial standalone feature-build manifest is currently tracked"
+        in provenance
+    )
+    assert not Path("artifacts/manifests/feature_build_provenance.json").exists()
+
+
 @pytest.mark.parametrize(
     ("markdown_path", "csv_path", "official_table"),
     [

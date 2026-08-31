@@ -1,6 +1,6 @@
 # Experiment provenance
 
-Standalone feature, EDA, baseline, nested model-selection, behavioral-analysis, and error-analysis
+EDA, baseline, nested model-selection, behavioral-analysis, error-analysis, and application-metadata
 runs automatically create centralized provenance manifests. Provenance is captured before any
 generated file is changed and records:
 
@@ -29,14 +29,25 @@ Official runners refuse a dirty repository by default. `--allow-dirty` exists fo
 smoke runs only: it emits a runtime warning and records
 `run_eligibility = non_official_dirty_worktree`. Such a run must not replace official results.
 
-The manifests are written to:
+The tracked manifests are written to:
 
-- `artifacts/manifests/feature_build_provenance.json`
 - `artifacts/manifests/eda_provenance.json`
 - `artifacts/experiments/nested_baselines/provenance.json`
 - `artifacts/experiments/nested_model_selection/provenance.json`
 - `artifacts/analysis/behavioral/provenance.json`
 - `artifacts/analysis/errors/provenance.json`
+- `artifacts/application/provenance.json`
+
+## Feature lineage
+
+The standalone `decisionlab-build-features` command can emit
+`artifacts/manifests/feature_build_provenance.json`, but DecisionLab does not claim that an
+official standalone feature-build manifest is currently tracked. Canonical feature lineage is
+instead recorded by the official nested model-experiment provenance. That manifest hashes the
+validated source data, complete configuration, transitive feature-engineering implementation,
+engineered feature table, feature-name contract, folds, and model outputs. Downstream behavioral
+and application provenance verifies those upstream hashes. Existing feature outputs are not
+retroactively attributed to a standalone manifest they never had.
 
 ## Legacy artifacts
 

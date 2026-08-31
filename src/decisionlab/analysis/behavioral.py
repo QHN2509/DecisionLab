@@ -267,7 +267,11 @@ def condition_sensitivity_rows(
     features: np.ndarray,
     feature_names: list[str],
 ) -> list[dict[str, Any]]:
-    """Estimate model sensitivity under coherent indicator and interaction updates."""
+    """Estimate sensitivity only for conditions with coherent feature-space interventions.
+
+    Lottery shape is intentionally excluded: changing its one-hot encoding without rebuilding
+    Gamble B's primitive outcome distribution would create an internally inconsistent scenario.
+    """
     position = {name: index for index, name in enumerate(feature_names)}
     ev = features[:, position["expected_value_difference_b_minus_a_oracle"]]
     rows: list[dict[str, Any]] = []
@@ -294,12 +298,6 @@ def condition_sensitivity_rows(
         rows[-1]["mean_difference_from_reference"] = float(np.mean(predictions[1] - predictions[0]))
 
     categorical_sets = {
-        "lottery_shape": {
-            "undefined": "lottery_shape_b_undefined",
-            "symmetric": "lottery_shape_b_symmetric",
-            "right_skewed": "lottery_shape_b_right_skewed",
-            "left_skewed": "lottery_shape_b_left_skewed",
-        },
         "correlation": {
             "negative": "correlation_negative",
             "zero": "correlation_zero",
@@ -527,9 +525,9 @@ def _plot_relationships(rows: list[dict[str, Any]]) -> None:
 
 
 def _plot_sensitivity(rows: list[dict[str, Any]]) -> None:
-    dimensions = ("feedback", "ambiguity", "lottery_shape", "correlation")
-    figure, axes = plt.subplots(2, 2, figsize=(11, 7.5))
-    for axis, dimension in zip(axes.flat, dimensions, strict=True):
+    dimensions = ("feedback", "ambiguity", "correlation")
+    figure, axes = plt.subplots(1, 3, figsize=(12, 4.5))
+    for axis, dimension in zip(axes, dimensions, strict=True):
         selected = [row for row in rows if row["dimension"] == dimension]
         axis.bar(
             [row["level"].replace("_", "\n") for row in selected],
@@ -539,7 +537,7 @@ def _plot_sensitivity(rows: list[dict[str, Any]]) -> None:
         axis.set_ylim(0.35, 0.65)
         axis.set_ylabel("Mean prediction")
         axis.set_title(f"Model sensitivity: {dimension.replace('_', ' ')}")
-    figure.suptitle("PDP-like condition sensitivity with coherent one-hot/interactions")
+    figure.suptitle("PDP-like sensitivity for coherent condition interventions")
     figure.tight_layout()
     figure.savefig(DEFAULT_SENSITIVITY_FIGURE, dpi=160, bbox_inches="tight")
     plt.close(figure)
@@ -856,9 +854,11 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
                 "contain the same condition pattern."
             ),
             (
-                "- The condition-sensitivity chart is PDP-like. It updates binary interactions "
-                "and one-hot sets coherently, but the resulting settings are still synthetic "
-                "and may be sparsely represented in the data."
+                "- The condition-sensitivity chart is PDP-like. It updates feedback and "
+                "ambiguity interactions and the correlation one-hot family coherently, but "
+                "the resulting settings are still synthetic and may be sparsely represented "
+                "in the data. Lottery shape is excluded because changing its encoding without "
+                "rebuilding Gamble B's outcome distribution would be internally inconsistent."
             ),
             (
                 "- Validation-bin relationships combine model behavior with the observed "

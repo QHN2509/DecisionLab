@@ -265,5 +265,10 @@ T. L. (2021). Using large-scale experiments and machine learning to discover
 theories of human decision-making. *Science, 372*(6547), 1209–1214.
 https://doi.org/10.1126/science.abe2629
 
+Bourgin, D. D., Peterson, J. C., Reichman, D., Russell, S. J., & Griffiths,
+T. L. (2019). Cognitive model priors for predicting human decisions.
+*Proceedings of the 36th International Conference on Machine Learning*,
+PMLR 97, 5133–5141. https://proceedings.mlr.press/v97/peterson19a.html
+
 Dataset repository: https://github.com/jcpeterson/choices13k, pinned here to
 commit `821ae7e88386b508ebb46fae76fac63cb62ec876`.
