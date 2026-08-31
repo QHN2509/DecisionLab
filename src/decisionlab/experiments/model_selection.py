@@ -115,6 +115,16 @@ def grouped_cv_splits(groups: np.ndarray, *, folds: int, random_seed: int):
     return grouped_fold_indices(groups, folds=folds, random_seed=random_seed)
 
 
+def audited_oracle_feature_names(
+    feature_summary: dict[str, Any], feature_names: list[str]
+) -> list[str]:
+    """Return the audited predictors that use oracle information under ambiguity."""
+    audit = feature_summary["leakage_audit"]["features"]
+    return [
+        name for name in feature_names if audit[name]["availability"] == "oracle under ambiguity"
+    ]
+
+
 def candidate_parameter_sets(config: dict[str, Any], name: str) -> list[dict[str, Any]]:
     """Expand one frozen modest parameter grid."""
     specification = config[name]
@@ -437,6 +447,7 @@ def run_model_selection_experiment(
     feature_summary = build_feature_tables(raw_dir=raw_dir, manifest_path=manifest_path)
     fold_summary = build_nested_cv_assignments(raw_dir, manifest_path)
     feature_names = audited_feature_names(feature_summary)
+    oracle_feature_names = audited_oracle_feature_names(feature_summary, feature_names)
     features = _read_engineered_features(DEFAULT_ENGINEERED_FEATURES, feature_names)
     selections = load_selections(raw_dir / "c13k_selections.csv")
     outer = read_outer_assignments(DEFAULT_OUTER_ASSIGNMENTS, len(selections))
@@ -537,6 +548,10 @@ def run_model_selection_experiment(
         },
         "rows": int(target.size),
         "structural_groups": int(np.unique(groups).size),
+        "feature_count": len(feature_names),
+        "feature_names": feature_names,
+        "oracle_feature_count": len(oracle_feature_names),
+        "oracle_feature_names": oracle_feature_names,
         "oof_rows_predicted": int(np.isfinite(result["selected_oof_predictions"]).sum()),
         "outer_group_overlap_count": 0,
         "outer_test_access_during_selection": False,

@@ -5,6 +5,7 @@ import pytest
 
 from decisionlab.evaluation.splitting import create_nested_fold_assignments
 from decisionlab.experiments.model_selection import (
+    audited_oracle_feature_names,
     candidate_parameter_sets,
     evaluate_parameter_set,
     grouped_cv_splits,
@@ -19,6 +20,20 @@ class _PredictionColumnPipeline:
 
     def predict(self, features: np.ndarray) -> np.ndarray:
         return features[:, 0]
+
+
+def test_oracle_feature_metadata_comes_from_leakage_audit() -> None:
+    feature_names = ["visible", "oracle"]
+    summary = {
+        "leakage_audit": {
+            "features": {
+                "visible": {"availability": "participant-visible"},
+                "oracle": {"availability": "oracle under ambiguity"},
+            }
+        }
+    }
+
+    assert audited_oracle_feature_names(summary, feature_names) == ["oracle"]
 
 
 def test_grouped_cv_has_no_group_overlap_and_shared_row_coverage() -> None:
