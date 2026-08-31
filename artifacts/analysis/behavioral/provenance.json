@@ -1,14 +1,14 @@
 {
-  "completed_at_utc": "2026-08-31T03:43:43.621916+00:00",
+  "completed_at_utc": "2026-08-31T16:15:02.891555+00:00",
   "configuration": {
-    "combined_sha256": "f10ff4ba1b0226c177ca386f653c3720096128c2e7a329e3376dbedd579403f7",
-    "complete_sha256": "4f88463070db75b0b72ddad8a3004ce65dfc653b634fe374061b1c257fe13291",
+    "combined_sha256": "4907ee20751988110bd1d4a1108e65259d3c9a3054907f1f6eb8dadb5d066135",
+    "complete_sha256": "7b60edd04b71c371fd3210892428e21da280461497f8a453473cb695be0847f7",
     "files": {
-      "configs/behavioral_analysis.json": "14ad71ebae802050943aae380fdb2bb601cd221d97df3a82789e99eb1f1ffc76"
+      "configs/behavioral_analysis.json": "232d694ad2d99b51f785ccd4338629859f30f5fdbc8c7072accc4dec05a851ed"
     },
     "values": {
       "allow_dirty": false,
-      "model_experiment": "/private/tmp/decisionlab-official-release.9ZfssG/behavioral/artifacts/experiments/nested_model_selection"
+      "model_experiment": "/Users/nguyenq/decisionlab/artifacts/experiments/nested_model_selection"
     }
   },
   "dataset": {
@@ -44,7 +44,7 @@
     "identifier": "nested_grouped_cv_v1"
   },
   "git": {
-    "commit_sha": "1499328a7b7ba1e7ec8ad450a7e345735f560e0a",
+    "commit_sha": "6dfd5e582da754a1aa02b70c745d6ffc41fad814",
     "is_dirty": false,
     "status_porcelain": [],
     "worktree_state": "clean"
@@ -66,44 +66,31 @@
   },
   "legacy_artifacts_reused": false,
   "outputs": {
-    "combined_sha256": "37bf768380abb6f4e3669528bb310126f55354da881881525d6e85564598b9a2",
+    "combined_sha256": "a299cd412f902458c4f3f5ea082f07d8c9d8a92dfd96f4cf463ac58fd341b17d",
     "files": {
-      "artifacts/analysis/behavioral/condition_sensitivity.csv": "d70c74a6020dda2870a23723336218e966675bae2f36edff260c3c8c2f4ad52c",
+      "artifacts/analysis/behavioral/condition_sensitivity.csv": "1a54772d0cfe2ceeae2ea3bf03c6207b05f40a7aa96fd30e77e550e07e3ee733",
       "artifacts/analysis/behavioral/error_slices.csv": "157e1a0bc0a082f28568997bd726893ab5a7972144b54efdddc11bc1bc133ef3",
       "artifacts/analysis/behavioral/normative_cases.csv": "4190e12dbd39f4ff8067c960e5f6341f385e4716f9a711d9b6ba249a87392d5f",
       "artifacts/analysis/behavioral/normative_examples.csv": "4b51eecd68a2d567041b6959a650c0c7b7d14ab92816059ff3ba78e7e5aa63dd",
-      "artifacts/analysis/behavioral/permutation_importance_domains.csv": "e633f226b3c57b555130367958d33f31bc26b96ff77e1c0a304f77294e2b78e9",
-      "artifacts/analysis/behavioral/permutation_importance_features.csv": "401d963ea861dd301c4be1a3d5813489899d0655e61e7c795915d64ff5caf7c4",
+      "artifacts/analysis/behavioral/permutation_importance_domains.csv": "76191934ee65f5e0f3adb53be36d2ee1819e2382db00586620fbbde6be8fccc5",
+      "artifacts/analysis/behavioral/permutation_importance_features.csv": "50b05a3cf8b77542a80c470e4036b959e6aae27d29f8f88fb3b80310a8448613",
       "artifacts/analysis/behavioral/prediction_relationships.csv": "18504abb2b864c36bf475681dfffce789b893f97279e2532a8eafca14aaa4526",
-      "artifacts/analysis/behavioral/statistics.json": "2105eafc6a59822836a13d894ff411bba8844324aefae0cf841bd72a7e502c75",
-      "reports/behavioral_analysis.md": "9d2944c1536ae8e713c59427b3d77c8ff48478d55a4fc369c5165e06339e3e25",
+      "artifacts/analysis/behavioral/statistics.json": "dc73ee8616347030cd57f3cacd010caa2cbce3fcabe60a2805c48b0c59b158b9",
+      "reports/behavioral_analysis.md": "92ab4b0c77c9c2589398047cbb3f22ec9c586c2a56d30a27e634df74714142f7",
       "reports/figures/behavioral_condition_sensitivity.png": "5c982aa257e676891a4c553e65f07db4a824b95557e2779fb17eb77147904719",
       "reports/figures/behavioral_error_slices.png": "7ab1c73e96258665d9f022b91de06034c2e6b2e7eb62a173d61e89db82e4e7bf",
-      "reports/figures/behavioral_permutation_importance.png": "475b39b325970416007ed9e7e97509dc38c1bf63435617c38eb42f94c91c54bd",
+      "reports/figures/behavioral_permutation_importance.png": "50de1c50c92546fe46aa59f0df6b80c67fc71e7bf898abb29e1a7b70bfc1180d",
       "reports/figures/behavioral_prediction_relationships.png": "2247d68642a96aa812ac0a3d951830dbe78fe3ac2d598b548ed9cc547c22d197",
       "reports/figures/normative_case_examples.png": "b93e8298ae8d08e3e24c250420315810611b9815677f1f6353edf0ba10241945",
       "reports/figures/normative_vs_observed.png": "c71e8b5087b2954d2686fcdc7eeea6ef2ded6fb15c778d3365b2e42e46b7c8b3"
     }
   },
-  "post_generation_amendments": [
-    {
-      "amended_at_utc": "2026-08-31T03:59:36Z",
-      "experiment_rerun": false,
-      "files": {
-        "reports/behavioral_analysis.md": {
-          "amended_sha256": "9d2944c1536ae8e713c59427b3d77c8ff48478d55a4fc369c5165e06339e3e25",
-          "original_sha256": "bf9927a31da070897757287e705aea1ef649ea37eaab6abd98f22f885382a254"
-        }
-      },
-      "metrics_changed": false,
-      "reason": "Documentation-only correction: identify the participant-count threshold as the complete development-data median."
-    }
-  ],
   "pipeline_source": {
-    "combined_sha256": "50c7690bcf146165718d877d806578c82381c4f67cb80bc7834d7dfa1237e5ed",
+    "combined_sha256": "80e1124a8c8c73bee2ee1ccc66fb14ad6f506d86f450e32f55bbdf1c3bc502be",
     "files": {
       "src/decisionlab/__init__.py": "058e17b94fa65db59d3470cc6c6666060b4a613162b7ea568febff816d2c7f77",
-      "src/decisionlab/analysis/behavioral.py": "715f41309ffffca4d7f12b9ee9f85743e8f97c0f960c4b8c6a36daa202216363",
+      "src/decisionlab/analysis/behavioral.py": "d1e7231e099bff9bd3f4d6cf0d5e2052f6accec22b25a66750e600103b9a3035",
+      "src/decisionlab/analysis/grouped_permutation.py": "d29d8f716d65101ef5cead8711d4a5b152e4bf7316da157f5b10c8059dd672b6",
       "src/decisionlab/data/fetch.py": "17eec2aa96d61311495cc6bb760331b86290f078e4184a3cd909f0b0ad6467f7",
       "src/decisionlab/data/validation.py": "4d9838b7699822726b65e70e8a6bbceddf54c598e9c32fc390b4bc18b9c9a990",
       "src/decisionlab/evaluation/metrics.py": "7c46f293bb0f3a8e1ade00065713227bd3cea9d586eeed25450cdff060b72337",
@@ -124,5 +111,5 @@
   },
   "provenance_schema": "decisionlab_run_provenance_v1",
   "run_eligibility": "official_clean_commit",
-  "started_at_utc": "2026-08-31T03:42:53.711981+00:00"
+  "started_at_utc": "2026-08-31T16:11:12.956585+00:00"
 }

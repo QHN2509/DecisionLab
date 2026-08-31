@@ -4,8 +4,8 @@ This report interprets complete nested outer out-of-fold predictions. It describ
 
 ## Main findings
 
-- The three largest grouped permutation signals were expected value (0.0858), payoff and risk (0.0442), probability structure (0.0346). Values are increases in held-out MAE after jointly permuting each domain; larger values indicate greater predictive reliance.
-- The five largest individual permutation signals were `expected_value_difference_b_minus_a_oracle` (0.0610), `loss_probability_difference_b_minus_a_oracle` (0.0260), `maximum_payoff_difference_b_minus_a` (0.0196), `minimum_payoff_difference_b_minus_a` (0.0117), `expected_value_difference_oracle_x_feedback` (0.0077). Correlated and engineered features can divide or duplicate importance, so these should not be read as isolated effects.
+- Grouped coherent domain perturbations ranked as complete problem block (0.1575; 0.1555–0.1594), gamble structure (0.1572; 0.1553–0.1591), information and experience conditions (0.0090; 0.0084–0.0095). Parenthesized values are equal-problem outer OOF MAE increases and 95% structural-group bootstrap intervals. These overlapping domains describe model reliance, not isolated feature effects.
+- Coherent primitive/dependency-family perturbations ranked as `gamble_b_distribution_and_lottery` (0.1847; 0.1825–0.1870), `gamble_a_distribution` (0.1662; 0.1638–0.1684), `ambiguity_condition` (0.0083; 0.0078–0.0088), `feedback_condition_block` (0.0008; 0.0006–0.0009), `correlation_condition` (-0.0000; -0.0000–-0.0000). Every dependent engineered feature was rebuilt through the production feature pipeline; these are family-level reliance estimates, not individual-feature effects.
 - Coherently switching feedback on while updating its EV interaction changed the mean prediction by +0.0055. Switching ambiguity on with its interaction changed it by +0.0427. These are model-sensitivity contrasts over synthetic feature settings, not treatment effects.
 - Validation-bin plots show how predictions and observations co-vary with expected-value, probability, payoff, and risk differences. They are observational predictive relationships and retain the oracle limitation under ambiguity.
 - Across the lowest-to-highest validation quantile bins, mean prediction changed from 0.303 to 0.724 for B-minus-A expected value and from 0.683 to 0.343 for relative loss probability. Thus, higher B expected value was associated with more predicted B choice, while higher relative B loss probability was associated with less.
@@ -63,7 +63,9 @@ Participant-count groups use the complete development-data median (`n = 16`), no
 
 ## Interpretation limits
 
-- Permutation importance measures loss of predictive accuracy, not causal importance. Correlated features and derived interactions can share signal.
+- Permutation importance measures loss of predictive accuracy, not causal importance. Families overlap and must not be added or interpreted as mutually exclusive effects.
+- Donor structural groups are drawn only from the same outer fold. Complete groups move together, engineered dependencies are recomputed, and uncertainty resamples whole structural groups.
+- The feedback block perturbation preserves paired rows. Its estimate may be driven mainly by singleton groups because paired feedback/no-feedback blocks contain the same condition pattern.
 - The condition-sensitivity chart is PDP-like. It updates binary interactions and one-hot sets coherently, but the resulting settings are still synthetic and may be sparsely represented in the data.
 - Validation-bin relationships combine model behavior with the observed feature distribution; they do not isolate a variable while holding every confounder fixed.
 - Ten features use design-oracle probabilities under ambiguity. Accordingly, ambiguity-related interpretation does not describe a strictly participant-visible prediction setting.
