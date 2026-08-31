@@ -562,6 +562,8 @@ def build_scenario_problem(
         raise ValueError("Gamble B sublottery probability must be in [0, 1]")
     if scenario.high_payoff_a < scenario.low_payoff_a:
         raise ValueError("Gamble A high payoff must be at least its low payoff")
+    if scenario.sublottery_mean_b < scenario.low_payoff_b:
+        raise ValueError("Gamble B sublottery mean payoff must be at least its low-branch payoff")
     if scenario.correlation not in {-1, 0, 1}:
         raise ValueError("Correlation category must be -1, 0, or 1")
 

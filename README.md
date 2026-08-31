@@ -154,26 +154,81 @@ rather than duplicated in the UI.
 - The application reports dataset-level validation error, not a calibrated
   uncertainty interval for a constructed scenario.
 
-## Reproduce the project
+## Quick start: launch the tracked demo
 
-Python 3.12 or newer and internet access are required for the initial install
-and dataset download. Run commands from the repository root.
+Python 3.12 or newer is required. The tracked production model and provenance-covered application
+metadata are sufficient to launch Streamlit; downloading choices13k is not required for this path.
 
 ```bash
+git clone https://github.com/QHN2509/DecisionLab.git
+cd DecisionLab
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements-dev.lock
 python -m pip install --no-build-isolation --no-deps -e .
 
+streamlit run app.py
+```
+
+This quick path consumes the checked-in official artifacts. It does not regenerate or make a new
+official experimental claim.
+
+## Local reproduction in one worktree
+
+The following path downloads and validates the data, rebuilds features and folds, and reruns the
+experiments. It is convenient for checking the project locally. Once an earlier stage changes the
+worktree, `--allow-dirty` keeps later commands executable while marking their manifests
+`non_official_dirty_worktree`; it does not weaken or bypass the provenance label.
+
+```bash
 decisionlab-fetch-data
-decisionlab-validate-data --output artifacts/manifests/data_validation_summary.json
+decisionlab-validate-data
 decisionlab-eda
-decisionlab-build-features
+decisionlab-build-features --allow-dirty
 decisionlab-create-folds
+decisionlab-run-baselines --allow-dirty
+decisionlab-select-model --allow-dirty
+```
+
+Downstream behavioral, error, and application-metadata runs require eligible official model
+artifacts. In a one-worktree check, retain the checked-in official model artifacts and run those
+analyses before overwriting them, or use the official staged workflow below. The quick Streamlit
+path remains available without any local data.
+
+## Official provenance-controlled regeneration
+
+Official runners start only from a clean commit. Use a dedicated reproduction branch, run one stage,
+review and commit its generated outputs, then begin the next stage from that new clean commit:
+
+```bash
+git switch -c reproduce/official
+
+decisionlab-fetch-data
+decisionlab-validate-data
+
+decisionlab-eda
+# review, then: git add -A && git commit -m "Reproduce EDA"
+
+decisionlab-build-features
+# review, then: git add -A && git commit -m "Reproduce features"
+
+decisionlab-create-folds
+# review, then: git add -A && git commit -m "Reproduce grouped folds"
+
 decisionlab-run-baselines
+# review, then: git add -A && git commit -m "Reproduce nested baselines"
+
 decisionlab-select-model
+# review, then: git add -A && git commit -m "Reproduce nested model selection"
+
 decisionlab-behavioral-analysis
+# review, then: git add -A && git commit -m "Reproduce behavioral analysis"
+
 decisionlab-error-analysis
+# review, then: git add -A && git commit -m "Reproduce error analysis"
+
+decisionlab-build-app-metadata
+# review, then: git add -A && git commit -m "Reproduce application metadata"
 
 python -m pytest
 ruff check .
@@ -183,18 +238,11 @@ python -m pip check
 streamlit run app.py
 ```
 
-The analysis commands regenerate local data, experiment artifacts, reports, and
-the selected pipeline. Production prediction tests intentionally run after
-those artifacts exist. See [docs/application.md](docs/application.md) for the
-application contract and [docs/evaluation_protocol.md](docs/evaluation_protocol.md)
-for the complete split and metric rationale.
-
-For an **official** baseline or model-selection run, the repository must be clean immediately
-before `decisionlab-run-baselines` or `decisionlab-select-model` starts. The commands above are a
-development workflow, not an instruction to run both official experiments uninterrupted: review
-and commit intended generated changes between stages, or run each experiment from a separate clean
-checkout of the intended commit. `--allow-dirty` is only for smoke testing and marks the result
-non-official.
+Do not collapse the official sequence into an uninterrupted dirty-worktree script. The clean-state
+check is part of the provenance contract. Separate clean worktrees may be used instead of the
+review-and-commit checkpoints. See [docs/application.md](docs/application.md) for the application
+contract and [docs/evaluation_protocol.md](docs/evaluation_protocol.md) for the split and metric
+rationale.
 
 ## Repository layout
 

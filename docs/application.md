@@ -7,9 +7,11 @@ Random Forest model. Run it from the repository root with:
 streamlit run app.py
 ```
 
-The application loads the official nested model-selection production pipeline and verifies it
-against both the model and behavioral provenance manifests. It uses the exact saved feature order
-and calls
+The application loads the tracked official nested model-selection production pipeline and a small
+tracked application-metadata artifact containing the training-feature ranges. It verifies the model,
+application metadata, and behavioral statistics against their provenance manifests. A fresh clone
+therefore does not need the ignored processed feature table or raw dataset merely to launch the app.
+The service uses the exact saved feature order and calls
 `engineer_scenario_features` from the production behavioral-feature module. The
 UI does not implement feature formulas.
 
@@ -29,7 +31,13 @@ scenario that requires feature-level extrapolation.
 The shared prediction service rejects non-finite or non-numeric payoffs,
 probabilities outside `[0, 1]`, inconsistent lottery-shape/outcome-count pairs,
 invalid correlation categories, and non-boolean feedback or ambiguity values.
+It also enforces the choices13k ordering contract that Gamble B's sublottery mean is at least its
+low-branch payoff.
 This validation applies even when the service is called outside Streamlit.
+
+The application metadata is stored at `artifacts/application/metadata.json`, with lineage in
+`artifacts/application/provenance.json`. `decisionlab-build-app-metadata` regenerates it from the
+provenance-verified official engineered feature table without fitting or changing the model.
 
 ## Interpretation contract
 

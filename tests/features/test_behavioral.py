@@ -356,6 +356,10 @@ def test_scenario_uses_production_feature_engineering() -> None:
         ({"high_probability_a": 1.01}, "probability must be"),
         ({"sublottery_probability_b": -0.01}, "probability must be"),
         ({"high_payoff_a": -2.0, "low_payoff_a": -1.0}, "high payoff"),
+        (
+            {"sublottery_mean_b": 1.0, "low_payoff_b": 2.0},
+            "sublottery mean payoff must be at least",
+        ),
         ({"lottery_shape_b": 4}, "Lottery shape"),
         ({"lottery_shape_b": 1, "lottery_outcomes_b": 1}, "other shapes require"),
         ({"correlation": 2}, "Correlation category"),

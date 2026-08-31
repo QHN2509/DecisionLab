@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import csv
 import json
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
@@ -11,6 +10,7 @@ from typing import Any
 import joblib
 import numpy as np
 
+from decisionlab.app.metadata import load_app_metadata
 from decisionlab.data.fetch import sha256_file
 from decisionlab.experiments.provenance import validate_upstream_artifacts
 from decisionlab.features.behavioral import (
@@ -25,9 +25,8 @@ DEFAULT_MODEL_METRICS = MODEL_SELECTION_DIR / "metrics.json"
 DEFAULT_PIPELINE = MODEL_SELECTION_DIR / "production_pipeline.joblib"
 DEFAULT_FEATURE_NAMES = MODEL_SELECTION_DIR / "feature_names.json"
 DEFAULT_MODEL_PROVENANCE = MODEL_SELECTION_DIR / "provenance.json"
-DEFAULT_ENGINEERED_FEATURES = (
-    PROJECT_ROOT / "data" / "processed" / "choices13k_engineered_features.csv"
-)
+DEFAULT_APP_METADATA = PROJECT_ROOT / "artifacts" / "application" / "metadata.json"
+DEFAULT_APP_PROVENANCE = PROJECT_ROOT / "artifacts" / "application" / "provenance.json"
 DEFAULT_BEHAVIORAL_STATISTICS = (
     PROJECT_ROOT / "artifacts" / "analysis" / "behavioral" / "statistics.json"
 )
@@ -77,40 +76,26 @@ class ScenarioPrediction:
     outside_training_range: list[str]
 
 
-def _read_feature_reference(path: Path, feature_names: list[str]) -> dict[str, dict[str, float]]:
-    with path.open(encoding="utf-8", newline="") as source:
-        rows = list(csv.DictReader(source))
-    if not rows or not set(feature_names).issubset(rows[0]):
-        raise ValueError("Processed feature reference does not match model feature names")
-    matrix = np.asarray([[float(row[name]) for name in feature_names] for row in rows])
-    return {
-        name: {
-            "min": float(np.min(matrix[:, index])),
-            "median": float(np.median(matrix[:, index])),
-            "max": float(np.max(matrix[:, index])),
-        }
-        for index, name in enumerate(feature_names)
-    }
-
-
 def load_prediction_bundle(
     metrics_path: Path = DEFAULT_MODEL_METRICS,
     pipeline_path: Path = DEFAULT_PIPELINE,
     feature_names_path: Path = DEFAULT_FEATURE_NAMES,
-    feature_reference_path: Path = DEFAULT_ENGINEERED_FEATURES,
+    app_metadata_path: Path = DEFAULT_APP_METADATA,
     behavioral_statistics_path: Path = DEFAULT_BEHAVIORAL_STATISTICS,
     model_provenance_path: Path = DEFAULT_MODEL_PROVENANCE,
     behavioral_provenance_path: Path = DEFAULT_BEHAVIORAL_PROVENANCE,
+    app_provenance_path: Path = DEFAULT_APP_PROVENANCE,
 ) -> PredictionBundle:
     """Load and verify every artifact used for interactive prediction."""
     model_provenance = validate_upstream_artifacts(
         model_provenance_path,
-        [metrics_path, pipeline_path, feature_names_path, feature_reference_path],
+        [metrics_path, pipeline_path, feature_names_path],
     )
     validate_upstream_artifacts(
         behavioral_provenance_path,
         [behavioral_statistics_path],
     )
+    validate_upstream_artifacts(app_provenance_path, [app_metadata_path])
     metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
     feature_document = json.loads(feature_names_path.read_text(encoding="utf-8"))
     behavioral = json.loads(behavioral_statistics_path.read_text(encoding="utf-8"))
@@ -126,6 +111,11 @@ def load_prediction_bundle(
     feature_names = feature_document["feature_names"]
     if feature_names != metrics["feature_names"]:
         raise ValueError("Feature order differs between saved model artifacts")
+    app_metadata = load_app_metadata(app_metadata_path, feature_names)
+    if app_metadata["model_metrics_sha256"] != sha256_file(metrics_path):
+        raise ValueError("Application metadata refers to different model metrics")
+    if app_metadata["model_feature_names_sha256"] != sha256_file(feature_names_path):
+        raise ValueError("Application metadata refers to different model features")
     if behavioral["model_metrics_sha256"] != sha256_file(metrics_path):
         raise ValueError("Behavioral interpretation refers to different model metrics")
     selected = metrics["production_model"]["name"]
@@ -134,7 +124,7 @@ def load_prediction_bundle(
     return PredictionBundle(
         pipeline=joblib.load(pipeline_path),
         feature_names=feature_names,
-        feature_reference=_read_feature_reference(feature_reference_path, feature_names),
+        feature_reference=app_metadata["feature_reference"],
         domain_importance=behavioral["permutation_importance"]["domains"],
         selected_model=selected,
         validation_mae=selected_metrics["mae"],

@@ -31,6 +31,7 @@ decisionlab-run-baselines = "decisionlab.experiments.baselines:main"
 decisionlab-select-model = "decisionlab.experiments.model_selection:main"
 decisionlab-behavioral-analysis = "decisionlab.analysis.behavioral:main"
 decisionlab-error-analysis = "decisionlab.analysis.errors:main"
+decisionlab-build-app-metadata = "decisionlab.app.metadata:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

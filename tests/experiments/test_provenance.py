@@ -8,6 +8,7 @@ import pytest
 
 from decisionlab.analysis import behavioral as behavioral_analysis
 from decisionlab.analysis import eda, errors
+from decisionlab.app import metadata as app_metadata
 from decisionlab.experiments import baselines, model_selection
 from decisionlab.experiments.provenance import (
     PROJECT_ROOT,
@@ -322,6 +323,11 @@ def test_non_official_smoke_manifest_contains_complete_lineage(
             "nested_grouped_cv_v1",
         ),
         (errors, errors.run_error_analysis, "nested_grouped_cv_v1"),
+        (
+            app_metadata,
+            app_metadata.build_application_metadata,
+            "nested_grouped_cv_v1_application_metadata",
+        ),
     ],
 )
 def test_official_runners_collect_provenance_before_pipeline_work(

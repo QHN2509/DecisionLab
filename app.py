@@ -80,6 +80,10 @@ def _scenario_inputs(config) -> ScenarioFeatureInput:
         value=defaults["low_payoff_b"],
         step=1.0,
     )
+    st.sidebar.caption(
+        "Gamble B follows the source-data contract: its sublottery mean must be at least "
+        "the low-branch payoff. Invalid combinations are rejected below."
+    )
     shape_label = st.sidebar.selectbox(
         "B sublottery shape",
         list(SHAPE_LABELS.values()),

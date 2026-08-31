@@ -58,12 +58,18 @@ def test_locked_environment_contains_every_direct_dependency() -> None:
     assert {requirement.lower() for requirement in declared} <= locked
 
 
-def test_readme_clean_workflow_commands_are_complete_and_ordered() -> None:
+def test_readme_quick_and_official_workflows_are_complete_and_ordered() -> None:
     readme = Path("README.md").read_text(encoding="utf-8")
-    commands = [
-        "python3 -m venv .venv",
-        "python -m pip install -r requirements-dev.lock",
-        "python -m pip install --no-build-isolation --no-deps -e .",
+    quick = readme.split("## Quick start: launch the tracked demo", maxsplit=1)[1].split(
+        "## Local reproduction in one worktree", maxsplit=1
+    )[0]
+    assert "streamlit run app.py" in quick
+    assert "decisionlab-fetch-data" not in quick
+
+    official = readme.split("## Official provenance-controlled regeneration", maxsplit=1)[1].split(
+        "## Repository layout", maxsplit=1
+    )[0]
+    official_commands = [
         "decisionlab-fetch-data",
         "decisionlab-validate-data",
         "decisionlab-eda",
@@ -73,12 +79,14 @@ def test_readme_clean_workflow_commands_are_complete_and_ordered() -> None:
         "decisionlab-select-model",
         "decisionlab-behavioral-analysis",
         "decisionlab-error-analysis",
+        "decisionlab-build-app-metadata",
         "python -m pytest",
         "streamlit run app.py",
     ]
 
-    positions = [readme.index(command) for command in commands]
+    positions = [official.index(command) for command in official_commands]
     assert positions == sorted(positions)
+    assert official.count("git add -A && git commit") == 8
 
 
 def test_official_analysis_reports_describe_the_recorded_oof_scope() -> None:
