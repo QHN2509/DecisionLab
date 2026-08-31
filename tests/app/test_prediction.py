@@ -56,9 +56,9 @@ def test_production_prediction_smoke(bundle: PredictionBundle) -> None:
     assert result.expected_value_benchmark == "Gamble A"
     assert len(result.feature_values) == len(bundle.feature_names) == 28
     assert [row["behavioral_domain"] for row in result.driver_rows[:3]] == [
-        "expected value",
-        "payoff and risk",
-        "probability structure",
+        "complete problem block",
+        "gamble structure",
+        "information and experience conditions",
     ]
 
 

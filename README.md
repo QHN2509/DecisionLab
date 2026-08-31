@@ -110,9 +110,10 @@ deviation from this simple benchmark, not evidence of irrationality.
 ## Behavioral interpretation
 
 Behavioral, normative, and error analyses were regenerated from complete outer OOF predictions.
-Expected-value structure, payoff/risk structure, and probability structure had the largest
-permutation signals. These results describe predictive association and model sensitivity—not
-causal effects or participant-level mechanisms. See
+Behavioral reliance is assessed with grouped, dependency-preserving perturbations: complete
+structural groups move only within their outer fold, and dependent engineered features are rebuilt
+through production feature engineering. The resulting family rankings describe model reliance and
+sensitivity—not isolated effects, causal effects, or participant-level mechanisms. See
 [`reports/behavioral_analysis.md`](reports/behavioral_analysis.md) and
 [`reports/error_analysis.md`](reports/error_analysis.md).
 

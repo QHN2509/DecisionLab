@@ -157,24 +157,19 @@ def _feature_vector(
 
 def _driver_summary(domain: str, scenario: ScenarioFeatureInput, features: dict[str, float]) -> str:
     summaries = {
-        "expected_value": (
-            f"EV(B) − EV(A) = {features['expected_value_difference_b_minus_a_oracle']:+.2f}"
+        "complete_problem_block": (
+            f"Joint supported scenario; EV(B) − EV(A) = "
+            f"{features['expected_value_difference_b_minus_a_oracle']:+.2f}"
         ),
-        "payoff_and_risk": (
-            "B − A payoff SD = "
-            f"{features['payoff_std_difference_b_minus_a_oracle']:+.2f}; range difference = "
-            f"{features['payoff_range_difference_b_minus_a']:+.2f}"
-        ),
-        "probability_structure": (
-            "B − A loss probability = "
-            f"{features['loss_probability_difference_b_minus_a_oracle']:+.2f}"
-        ),
-        "ambiguity": "B probabilities hidden" if scenario.ambiguity else "Probabilities known",
-        "lottery_structure": (
-            f"{SHAPE_LABELS[scenario.lottery_shape_b]}; "
+        "gamble_structure": (
+            f"{SHAPE_LABELS[scenario.lottery_shape_b]}; B − A payoff SD = "
+            f"{features['payoff_std_difference_b_minus_a_oracle']:+.2f}; "
             f"{CORRELATION_LABELS[scenario.correlation].lower()} correlation"
         ),
-        "feedback": "Feedback available" if scenario.feedback else "No feedback",
+        "information_and_experience_conditions": (
+            ("B probabilities hidden" if scenario.ambiguity else "Probabilities known")
+            + ("; feedback available" if scenario.feedback else "; no feedback")
+        ),
     }
     return summaries[domain]
 

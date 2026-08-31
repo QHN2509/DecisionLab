@@ -18,6 +18,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from decisionlab import __version__
+from decisionlab.analysis.grouped_permutation import (
+    DOMAIN_PERTURBATION_FAMILIES,
+    FEATURE_PERTURBATION_FAMILIES,
+    engineer_input_matrix,
+    grouped_permutation_importance_rows,
+    production_feature_inputs,
+)
 from decisionlab.data.fetch import DEFAULT_DESTINATION, DEFAULT_MANIFEST, sha256_file
 from decisionlab.data.validation import load_and_validate, load_problems, load_selections
 from decisionlab.evaluation.metrics import problem_group_regression_metrics, regression_metrics
@@ -65,45 +72,6 @@ DEFAULT_ERROR_FIGURE = FIGURE_DIR / "behavioral_error_slices.png"
 DEFAULT_NORMATIVE_FIGURE = FIGURE_DIR / "normative_vs_observed.png"
 DEFAULT_NORMATIVE_EXAMPLES_FIGURE = FIGURE_DIR / "normative_case_examples.png"
 
-DOMAIN_FEATURES = {
-    "expected_value": (
-        "expected_value_a",
-        "expected_value_b_oracle",
-        "expected_value_difference_b_minus_a_oracle",
-        "expected_value_difference_oracle_x_feedback",
-        "expected_value_difference_oracle_x_ambiguity",
-    ),
-    "ambiguity": ("ambiguity_indicator",),
-    "feedback": ("feedback_indicator",),
-    "lottery_structure": (
-        "lottery_shape_b_undefined",
-        "lottery_shape_b_symmetric",
-        "lottery_shape_b_right_skewed",
-        "lottery_shape_b_left_skewed",
-        "correlation_negative",
-        "correlation_zero",
-        "correlation_positive",
-    ),
-    "probability_structure": (
-        "best_payoff_probability_a",
-        "best_payoff_probability_b_oracle",
-        "best_payoff_probability_difference_b_minus_a_oracle",
-        "loss_probability_a",
-        "loss_probability_b_oracle",
-        "loss_probability_difference_b_minus_a_oracle",
-    ),
-    "payoff_and_risk": (
-        "payoff_range_a",
-        "payoff_range_b",
-        "payoff_range_difference_b_minus_a",
-        "maximum_payoff_difference_b_minus_a",
-        "minimum_payoff_difference_b_minus_a",
-        "payoff_std_a",
-        "payoff_std_b_oracle",
-        "payoff_std_difference_b_minus_a_oracle",
-    ),
-}
-
 RELATIONSHIP_FEATURES = {
     "Expected-value difference B − A (oracle)": (
         "expected_value_difference_b_minus_a_oracle",
@@ -134,6 +102,9 @@ def load_behavioral_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         "selected_model_experiment",
         "random_seed",
         "permutation_repeats",
+        "permutation_scheme",
+        "group_bootstrap_repeats",
+        "permutation_confidence_level",
         "relationship_quantile_bins",
         "expected_value_near_tie_threshold",
         "participant_count_split",
@@ -146,6 +117,12 @@ def load_behavioral_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         raise ValueError("Behavioral generalization analysis requires nested outer OOF predictions")
     if config["permutation_repeats"] < 2 or config["relationship_quantile_bins"] < 3:
         raise ValueError("Behavioral analysis requires repeated permutations and at least 3 bins")
+    if config["permutation_scheme"] != ("same_outer_fold_structural_group_primitive_recompute_v1"):
+        raise ValueError("Behavioral analysis requires the grouped coherent permutation scheme")
+    if config["group_bootstrap_repeats"] < 2:
+        raise ValueError("Behavioral analysis requires repeated structural-group bootstraps")
+    if not 0.0 < config["permutation_confidence_level"] < 1.0:
+        raise ValueError("Permutation confidence level must be in (0, 1)")
     if config["expected_value_near_tie_threshold"] <= 0.0:
         raise ValueError("Expected-value near-tie threshold must be positive")
     if config["participant_count_split"] != "development_median":
@@ -173,75 +150,12 @@ def load_behavioral_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
     return config
 
 
-def behavioral_domains(feature_names: list[str]) -> dict[str, list[int]]:
-    """Map prespecified behavioral domains to audited model feature positions."""
-    positions = {name: index for index, name in enumerate(feature_names)}
-    missing = sorted(
-        feature
-        for features in DOMAIN_FEATURES.values()
-        for feature in features
-        if feature not in positions
-    )
-    if missing:
-        raise ValueError(f"Behavioral-analysis features missing from selected model: {missing}")
-    assigned = [feature for features in DOMAIN_FEATURES.values() for feature in features]
-    if len(assigned) != len(set(assigned)) or set(assigned) != set(feature_names):
-        raise ValueError("Behavioral domains must partition the selected feature set exactly")
-    return {
-        domain: [positions[name] for name in names] for domain, names in DOMAIN_FEATURES.items()
-    }
-
-
 def _problem_group_mae(
     observed: np.ndarray, predicted: np.ndarray, structural_groups: np.ndarray
 ) -> float:
     return problem_group_regression_metrics(
         observed, predicted, structural_groups, include_r2=False
     )["mae"]
-
-
-def permutation_importance_rows(
-    predict: Callable[[np.ndarray], np.ndarray],
-    features: np.ndarray,
-    target: np.ndarray,
-    structural_groups: np.ndarray,
-    named_columns: dict[str, list[int]],
-    *,
-    repeats: int,
-    random_seed: int,
-) -> list[dict[str, Any]]:
-    """Measure held-out MAE increase after joint permutation of named columns."""
-    if (
-        features.shape[0] != target.size
-        or structural_groups.size != target.size
-        or target.size == 0
-    ):
-        raise ValueError("Permutation inputs must have aligned nonempty rows")
-    baseline_mae = _problem_group_mae(target, predict(features), structural_groups)
-    rows: list[dict[str, Any]] = []
-    for item_index, (name, columns) in enumerate(named_columns.items()):
-        increases = []
-        rng = np.random.default_rng(random_seed + item_index)
-        for _ in range(repeats):
-            permutation = rng.permutation(features.shape[0])
-            permuted = features.copy()
-            permuted[:, columns] = features[permutation][:, columns]
-            increases.append(
-                _problem_group_mae(target, predict(permuted), structural_groups) - baseline_mae
-            )
-        rows.append(
-            {
-                "name": name,
-                "column_count": len(columns),
-                "baseline_mae": baseline_mae,
-                "mean_mae_increase": float(np.mean(increases)),
-                "std_mae_increase": float(np.std(increases, ddof=1)),
-                "min_mae_increase": float(np.min(increases)),
-                "max_mae_increase": float(np.max(increases)),
-                "repeats": repeats,
-            }
-        )
-    return sorted(rows, key=lambda row: row["mean_mae_increase"], reverse=True)
 
 
 def quantile_relationship_rows(
@@ -561,18 +475,23 @@ def _plot_importance(domain_rows: list[dict[str, Any]], feature_rows: list[dict[
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     figure, axes = plt.subplots(1, 2, figsize=(12, 5.5))
     for axis, rows, title, limit in (
-        (axes[0], domain_rows, "Behavioral-domain importance", len(domain_rows)),
-        (axes[1], feature_rows, "Top individual features", 10),
+        (axes[0], domain_rows, "Coherent domain reliance", len(domain_rows)),
+        (axes[1], feature_rows, "Coherent input-family reliance", len(feature_rows)),
     ):
         selected = list(reversed(rows[:limit]))
         labels = [row["name"].replace("_", " ") for row in selected]
         values = [row["mean_mae_increase"] for row in selected]
-        errors = [row["std_mae_increase"] for row in selected]
+        errors = np.asarray(
+            [
+                [row["mean_mae_increase"] - row["group_bootstrap_ci_lower"] for row in selected],
+                [row["group_bootstrap_ci_upper"] - row["mean_mae_increase"] for row in selected],
+            ]
+        )
         axis.barh(labels, values, xerr=errors, color="#4472C4", alpha=0.85)
         axis.axvline(0.0, color="black", linewidth=0.8)
-        axis.set_xlabel("Validation MAE increase after permutation")
+        axis.set_xlabel("Equal-problem outer OOF MAE increase")
         axis.set_title(title)
-    figure.suptitle("Selected-model permutation importance (10 repeats)")
+    figure.suptitle("Grouped, dependency-preserving permutation importance")
     figure.tight_layout()
     figure.savefig(DEFAULT_IMPORTANCE_FIGURE, dpi=160, bbox_inches="tight")
     plt.close(figure)
@@ -747,11 +666,14 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
     slices = statistics["error_slices"]
     sensitivity = statistics["condition_sensitivity"]
     top_domains = ", ".join(
-        f"{row['name'].replace('_', ' ')} ({row['mean_mae_increase']:.4f})"
+        f"{row['name'].replace('_', ' ')} ({row['mean_mae_increase']:.4f}; "
+        f"{row['group_bootstrap_ci_lower']:.4f}–{row['group_bootstrap_ci_upper']:.4f})"
         for row in domain_rows[:3]
     )
     top_features = ", ".join(
-        f"`{row['name']}` ({row['mean_mae_increase']:.4f})" for row in feature_rows[:5]
+        f"`{row['name']}` ({row['mean_mae_increase']:.4f}; "
+        f"{row['group_bootstrap_ci_lower']:.4f}–{row['group_bootstrap_ci_upper']:.4f})"
+        for row in feature_rows[:5]
     )
     feedback_delta = _lookup(sensitivity, "feedback", "1")["mean_difference_from_reference"]
     ambiguity_delta = _lookup(sensitivity, "ambiguity", "1")["mean_difference_from_reference"]
@@ -790,14 +712,16 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
         "## Main findings",
         "",
         (
-            f"- The three largest grouped permutation signals were {top_domains}. Values are "
-            "increases in held-out MAE after jointly permuting each domain; larger values "
-            "indicate greater predictive reliance."
+            f"- Grouped coherent domain perturbations ranked as {top_domains}. Parenthesized "
+            "values are equal-problem outer OOF MAE increases and 95% structural-group "
+            "bootstrap intervals. These overlapping domains describe model reliance, not "
+            "isolated feature effects."
         ),
         (
-            f"- The five largest individual permutation signals were {top_features}. "
-            "Correlated and engineered features can divide or duplicate importance, so these "
-            "should not be read as isolated effects."
+            f"- Coherent primitive/dependency-family perturbations ranked as {top_features}. "
+            "Every dependent engineered feature was rebuilt through the production feature "
+            "pipeline; these are family-level reliance estimates, not individual-feature "
+            "effects."
         ),
         (
             "- Coherently switching feedback on while updating its EV interaction changed the "
@@ -918,7 +842,18 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
             "",
             (
                 "- Permutation importance measures loss of predictive accuracy, not causal "
-                "importance. Correlated features and derived interactions can share signal."
+                "importance. Families overlap and must not be added or interpreted as mutually "
+                "exclusive effects."
+            ),
+            (
+                "- Donor structural groups are drawn only from the same outer fold. Complete "
+                "groups move together, engineered dependencies are recomputed, and uncertainty "
+                "resamples whole structural groups."
+            ),
+            (
+                "- The feedback block perturbation preserves paired rows. Its estimate may be "
+                "driven mainly by singleton groups because paired feedback/no-feedback blocks "
+                "contain the same condition pattern."
             ),
             (
                 "- The condition-sensitivity chart is PDP-like. It updates binary interactions "
@@ -996,10 +931,17 @@ def run_behavioral_analysis(
         raise ValueError("Behavioral analysis requires nested grouped CV")
     if model_metrics["headline_source"] != "complete_outer_out_of_fold_predictions":
         raise ValueError("Behavioral analysis requires complete outer OOF predictions")
-    domains = behavioral_domains(feature_names)
     features = _read_engineered_features(DEFAULT_ENGINEERED_FEATURES, feature_names)
     selections = load_selections(raw_dir / "c13k_selections.csv")
     problems = load_problems(raw_dir / "c13k_problems.json", selections)
+    production_inputs = production_feature_inputs(selections, problems)
+    recomputed_features = engineer_input_matrix(production_inputs, feature_names)
+    if not np.array_equal(features, recomputed_features):
+        maximum_difference = float(np.max(np.abs(features - recomputed_features)))
+        raise ValueError(
+            "Persisted model features differ from production feature recomputation; "
+            f"maximum absolute difference={maximum_difference:.12g}"
+        )
     oof = read_complete_outer_oof_predictions(
         DEFAULT_MODEL_PREDICTIONS, expected_rows=len(selections)
     )
@@ -1029,23 +971,32 @@ def run_behavioral_analysis(
     if not np.allclose(predictions, foldwise_predict(validation_features), atol=1e-12):
         raise ValueError("Saved OOF predictions differ from the outer-fold pipelines")
 
-    feature_columns = {name: [index] for index, name in enumerate(feature_names)}
-    feature_importance = permutation_importance_rows(
+    feature_importance = grouped_permutation_importance_rows(
         foldwise_predict,
+        production_inputs,
         validation_features,
         validation_target,
         validation_groups,
-        feature_columns,
+        outer_fold,
+        feature_names,
+        FEATURE_PERTURBATION_FAMILIES,
         repeats=config["permutation_repeats"],
+        group_bootstrap_repeats=config["group_bootstrap_repeats"],
+        confidence_level=config["permutation_confidence_level"],
         random_seed=config["random_seed"],
     )
-    domain_importance = permutation_importance_rows(
+    domain_importance = grouped_permutation_importance_rows(
         foldwise_predict,
+        production_inputs,
         validation_features,
         validation_target,
         validation_groups,
-        domains,
+        outer_fold,
+        feature_names,
+        DOMAIN_PERTURBATION_FAMILIES,
         repeats=config["permutation_repeats"],
+        group_bootstrap_repeats=config["group_bootstrap_repeats"],
+        confidence_level=config["permutation_confidence_level"],
         random_seed=config["random_seed"] + 10_000,
     )
     position = {name: index for index, name in enumerate(feature_names)}
@@ -1115,6 +1066,11 @@ def run_behavioral_analysis(
         "expected_value_near_tie_threshold": config["expected_value_near_tie_threshold"],
         "permutation_importance": {
             "metric": "equal_structural_problem_group_outer_oof_mae_increase",
+            "scheme": config["permutation_scheme"],
+            "uncertainty": "outer_fold_stratified_structural_group_bootstrap",
+            "feature_table_scope": "coherent_primitive_dependency_families",
+            "domain_table_scope": "overlapping_coherent_domains",
+            "production_feature_recomputation_match": True,
             "features": feature_importance,
             "domains": domain_importance,
         },

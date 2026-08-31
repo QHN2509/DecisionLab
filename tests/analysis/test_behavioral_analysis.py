@@ -1,60 +1,24 @@
 from __future__ import annotations
 
+from dataclasses import fields
 from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
 from decisionlab.analysis.behavioral import (
-    DOMAIN_FEATURES,
-    behavioral_domains,
     condition_sensitivity_rows,
     error_slice_rows,
     normative_case_rows,
-    permutation_importance_rows,
     quantile_relationship_rows,
     select_normative_examples,
     summarize_normative_cases,
 )
+from decisionlab.features.behavioral import EngineeredFeatureRow
 
 
 def _all_feature_names() -> list[str]:
-    return [feature for features in DOMAIN_FEATURES.values() for feature in features]
-
-
-def test_behavioral_domains_partition_feature_set() -> None:
-    names = _all_feature_names()
-
-    domains = behavioral_domains(names)
-
-    assigned = [index for indices in domains.values() for index in indices]
-    assert sorted(assigned) == list(range(len(names)))
-    assert len(assigned) == len(set(assigned))
-
-
-def test_behavioral_domains_reject_missing_feature() -> None:
-    with pytest.raises(ValueError, match="missing"):
-        behavioral_domains(_all_feature_names()[:-1])
-
-
-def test_permutation_importance_identifies_predictive_column() -> None:
-    rng = np.random.default_rng(10)
-    features = rng.normal(size=(500, 2))
-    target = np.clip(0.5 + 0.2 * features[:, 0], 0.0, 1.0)
-
-    rows = permutation_importance_rows(
-        lambda values: np.clip(0.5 + 0.2 * values[:, 0], 0.0, 1.0),
-        features,
-        target,
-        np.asarray([f"group-{index}" for index in range(target.size)]),
-        {"signal": [0], "noise": [1]},
-        repeats=5,
-        random_seed=7,
-    )
-
-    assert rows[0]["name"] == "signal"
-    assert rows[0]["mean_mae_increase"] > 0.1
-    assert rows[1]["mean_mae_increase"] == pytest.approx(0.0)
+    return [field.name for field in fields(EngineeredFeatureRow)]
 
 
 def test_quantile_relationship_rows_cover_all_observations() -> None:

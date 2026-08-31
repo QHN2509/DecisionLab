@@ -37,8 +37,8 @@ This validation applies even when the service is called outside Streamlit.
   prediction or recommendation.
 - The expected-value result is a simple benchmark, not a definition of
   rational behavior.
-- Important drivers are held-out permutation-importance domains from the
-  behavioral analysis. They are global predictive reliance measures, not
+- Important drivers are grouped, dependency-preserving outer-OOF permutation-reliance domains
+  from the behavioral analysis. They are global predictive reliance measures, not
   causal effects or local SHAP values.
 - Feedback and ambiguity comparisons are coherent model-sensitivity checks.
   They are not treatment-effect estimates.

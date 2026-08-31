@@ -1,9 +1,12 @@
 {
-  "analysis_name": "selected_model_behavioral_analysis_v1",
+  "analysis_name": "selected_model_behavioral_analysis_v2_grouped_coherent_permutation",
   "prediction_source": "nested_outer_oof",
   "selected_model_experiment": "nested_grouped_model_selection_v3",
   "random_seed": 20260827,
   "permutation_repeats": 10,
+  "permutation_scheme": "same_outer_fold_structural_group_primitive_recompute_v1",
+  "group_bootstrap_repeats": 2000,
+  "permutation_confidence_level": 0.95,
   "relationship_quantile_bins": 10,
   "expected_value_near_tie_threshold": 1.0,
   "participant_count_split": "development_median",
