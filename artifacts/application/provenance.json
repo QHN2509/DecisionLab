@@ -1,0 +1,81 @@
+{
+  "completed_at_utc": "2026-08-31T16:58:56.567419+00:00",
+  "configuration": {
+    "combined_sha256": "c398251aa515f5514d60b7654014325fa26f2cee7790bbfc9c3ec8edc8d16ca4",
+    "complete_sha256": "e0c6ec8aa0638252af3bd08a165eaf0ac674b9ab39ecef67f423984d61ed552d",
+    "files": {
+      "configs/app.json": "17fa24ac44236a735ca4dfefb4e67eed7ed84b0590757a3656beec0de0e58e4a"
+    },
+    "values": {
+      "allow_dirty": false,
+      "metadata_output": "/Users/nguyenq/decisionlab/artifacts/application/metadata.json",
+      "model_experiment": "/Users/nguyenq/decisionlab/artifacts/experiments/nested_model_selection"
+    }
+  },
+  "dataset": {
+    "checksums": {
+      "c13k_problems.json": "c6bdb0ae7e0d0ca127b649b4996a7a49b3d0c4c43e5f9a851677fe4527276632",
+      "c13k_selections.csv": "e21941718b83fd97a5997545489a66ce27bec3b3f62700a0774fb5f997fea5c7"
+    },
+    "manifest_sha256": "7aa8121ff2661cec64a2ccc3cab57430200350a2a17b4a70314ff97dda45bcd7",
+    "name": "choices13k",
+    "revision": "821ae7e88386b508ebb46fae76fac63cb62ec876",
+    "source_repository": "https://github.com/jcpeterson/choices13k"
+  },
+  "environment": {
+    "combined_sha256": "78fb5de6d25da965200379d375c53772ce4a239f499d626dd0feb7124fbd18a8",
+    "environment_sha256": "2ada8c84d4fdfe1df343b90bb97b85f16558669f23bb032ce2abba9113949196",
+    "files": {
+      "pyproject.toml": "26e06aecce51f719aafe7c814f2e1dbe9a9b50f4d6913754e358e47d57f2dfd2",
+      "requirements-dev.lock": "fcf3241224b8eebf7465ae2694f79d788c9a15795a7df68d180857ce212ac5b9"
+    },
+    "runtime": {
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "python_implementation": "CPython",
+      "python_version": "3.14.2"
+    }
+  },
+  "experiment_name": "decisionlab_application_metadata_v1",
+  "fold_specification": {
+    "artifact_hashes": {},
+    "identifier": "nested_grouped_cv_v1_application_metadata"
+  },
+  "git": {
+    "commit_sha": "5d9638bf1ff4eb9966a7f1f52c13409fb40c0e32",
+    "is_dirty": false,
+    "status_porcelain": [],
+    "worktree_state": "clean"
+  },
+  "inputs": {
+    "combined_sha256": "e8ce420acabac32c4b43d43f5c161f33a8e3a2d321bbc9d36732752e4a00f9f1",
+    "files": {
+      "artifacts/experiments/nested_model_selection/feature_names.json": "425f9fe919643cbadade3d8df70e123e381eeeb7e023cdb9645f8d96e595b751",
+      "artifacts/experiments/nested_model_selection/metrics.json": "8d853d5f0674236b5b60af4ffff7e32d139d1d130589fbe368563e3a53194231",
+      "artifacts/experiments/nested_model_selection/provenance.json": "9cc56ed807f78c2ae6aaf1d33e89e7ddf724daaef0340580f732856df58f08ab",
+      "data/processed/choices13k_engineered_features.csv": "52b0d41899860e7ffe6f590fc02f62ffaf7592113f0b25d4858c6f195145e3b4"
+    }
+  },
+  "legacy_artifacts_reused": false,
+  "outputs": {
+    "combined_sha256": "a3344e7b52320c11f2a72a85889d6e44622bdbac5d10493c7b6c369d7eeadf3d",
+    "files": {
+      "artifacts/application/metadata.json": "c6a6fdeb90d2e31e1260e5d2f0d05a7498a3ff0d7aff0291551b14fdba0fd89d"
+    }
+  },
+  "pipeline_source": {
+    "combined_sha256": "0083eaf34e788b57452d639728fc5b0b6fd80d959baafbf7947cff751ee729f5",
+    "files": {
+      "src/decisionlab/app/metadata.py": "af93b0f11d25ec6e6e6715b07b6196502d11376937fc42046bbbb1782e2faf11",
+      "src/decisionlab/data/fetch.py": "17eec2aa96d61311495cc6bb760331b86290f078e4184a3cd909f0b0ad6467f7",
+      "src/decisionlab/experiments/provenance.py": "11297659a0dc66bf338cd033a96b2a5a94a32a784da8fdcd296b9dd1f56afe45"
+    }
+  },
+  "provenance_file": {
+    "path": "artifacts/application/provenance.json",
+    "reason": "A manifest cannot include its own stable content hash.",
+    "self_hash_in_outputs": false
+  },
+  "provenance_schema": "decisionlab_run_provenance_v1",
+  "run_eligibility": "official_clean_commit",
+  "started_at_utc": "2026-08-31T16:58:56.482814+00:00"
+}

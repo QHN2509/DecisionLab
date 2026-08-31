@@ -1,0 +1,151 @@
+{
+  "schema": "decisionlab_application_metadata_v1",
+  "generated_at_utc": "2026-08-31T16:58:56.488712+00:00",
+  "source_model_git_sha": "1499328a7b7ba1e7ec8ad450a7e345735f560e0a",
+  "model_metrics_sha256": "8d853d5f0674236b5b60af4ffff7e32d139d1d130589fbe368563e3a53194231",
+  "model_feature_names_sha256": "425f9fe919643cbadade3d8df70e123e381eeeb7e023cdb9645f8d96e595b751",
+  "engineered_features_sha256": "52b0d41899860e7ffe6f590fc02f62ffaf7592113f0b25d4858c6f195145e3b4",
+  "feature_count": 28,
+  "feature_reference": {
+    "expected_value_a": {
+      "min": -10.45,
+      "median": 11.0,
+      "max": 30.47
+    },
+    "expected_value_b_oracle": {
+      "min": -23.400000000000002,
+      "median": 10.8,
+      "max": 45.5
+    },
+    "expected_value_difference_b_minus_a_oracle": {
+      "min": -17.54,
+      "median": 0.0,
+      "max": 16.700000000000003
+    },
+    "payoff_range_a": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 158.0
+    },
+    "payoff_range_b": {
+      "min": 0.0,
+      "median": 37.0,
+      "max": 283.0
+    },
+    "payoff_range_difference_b_minus_a": {
+      "min": -150.0,
+      "median": 24.0,
+      "max": 269.0
+    },
+    "maximum_payoff_difference_b_minus_a": {
+      "min": -120.0,
+      "median": 13.0,
+      "max": 259.0
+    },
+    "minimum_payoff_difference_b_minus_a": {
+      "min": -78.0,
+      "median": -7.0,
+      "max": 83.0
+    },
+    "payoff_std_a": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 77.40387587194843
+    },
+    "payoff_std_b_oracle": {
+      "min": 0.0,
+      "median": 10.897247358851684,
+      "max": 80.34326356328825
+    },
+    "payoff_std_difference_b_minus_a_oracle": {
+      "min": -72.09170987154609,
+      "median": 6.902173570694959,
+      "max": 78.38367176906169
+    },
+    "best_payoff_probability_a": {
+      "min": 0.01,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "best_payoff_probability_b_oracle": {
+      "min": 7.8125e-05,
+      "median": 0.19999999999999998,
+      "max": 1.0
+    },
+    "best_payoff_probability_difference_b_minus_a_oracle": {
+      "min": -0.999921875,
+      "median": -0.55,
+      "max": 0.99
+    },
+    "loss_probability_a": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "loss_probability_b_oracle": {
+      "min": 0.0,
+      "median": 0.153125,
+      "max": 1.0
+    },
+    "loss_probability_difference_b_minus_a_oracle": {
+      "min": -1.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "ambiguity_indicator": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "feedback_indicator": {
+      "min": 0.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "lottery_shape_b_undefined": {
+      "min": 0.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "lottery_shape_b_symmetric": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "lottery_shape_b_right_skewed": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "lottery_shape_b_left_skewed": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "correlation_negative": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "correlation_zero": {
+      "min": 0.0,
+      "median": 1.0,
+      "max": 1.0
+    },
+    "correlation_positive": {
+      "min": 0.0,
+      "median": 0.0,
+      "max": 1.0
+    },
+    "expected_value_difference_oracle_x_feedback": {
+      "min": -17.54,
+      "median": 0.0,
+      "max": 16.700000000000003
+    },
+    "expected_value_difference_oracle_x_ambiguity": {
+      "min": -16.5,
+      "median": 0.0,
+      "max": 15.0
+    }
+  }
+}
