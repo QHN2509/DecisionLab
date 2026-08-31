@@ -901,7 +901,7 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
         [
             "",
             (
-                f"Participant-count groups use the training-set median (`n = "
+                f"Participant-count groups use the complete development-data median (`n = "
                 f"{statistics['participant_count_threshold']:g}`), not a validation-optimized "
                 "cutoff. Expected-value regimes use the prespecified ±"
                 f"{statistics['expected_value_near_tie_threshold']:g} payoff-unit near-tie band."

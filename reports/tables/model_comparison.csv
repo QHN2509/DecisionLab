@@ -1,3 +1,3 @@
-model,selected,validation_mae,validation_rmse,validation_r2,weighted_mae,weighted_rmse,mean_cv_mae,std_cv_mae,complexity_rank
-random_forest,True,0.0808871853936082,0.10121503451989541,0.7909783938002468,0.0807275609217538,0.10102902344397366,0.0825305271356136,0.0014874282843278309,2
-gradient_boosting,False,0.08306710805174697,0.10474253224674647,0.7761550691457582,0.08284963575773346,0.10448047613460694,0.08431191638658944,0.0017226569000698814,3
+artifact_status,artifact_note,model,selected,validation_mae,validation_rmse,validation_r2,weighted_mae,weighted_rmse,mean_cv_mae,std_cv_mae,complexity_rank
+stale_legacy,Not part of the current official nested grouped-CV evaluation; see nested_model_comparison.csv,random_forest,True,0.0808871853936082,0.10121503451989541,0.7909783938002468,0.0807275609217538,0.10102902344397366,0.0825305271356136,0.0014874282843278309,2
+stale_legacy,Not part of the current official nested grouped-CV evaluation; see nested_model_comparison.csv,gradient_boosting,False,0.08306710805174697,0.10474253224674647,0.7761550691457582,0.08284963575773346,0.10448047613460694,0.08431191638658944,0.0017226569000698814,3

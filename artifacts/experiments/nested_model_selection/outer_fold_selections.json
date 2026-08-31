@@ -1,0 +1,297 @@
+[
+  {
+    "inner_results": {
+      "gradient_boosting": {
+        "mean_cv_mae": 0.08283060698918454,
+        "mean_cv_rmse": 0.10475220114028673,
+        "model": "gradient_boosting",
+        "outer_fold": 0,
+        "parameters": {
+          "learning_rate": 0.07,
+          "loss": "squared_error",
+          "max_depth": 3,
+          "min_samples_leaf": 20,
+          "n_estimators": 200
+        },
+        "std_cv_mae": 0.002091169768187653,
+        "std_cv_rmse": 0.0018841204749398988
+      },
+      "random_forest": {
+        "mean_cv_mae": 0.08042987459658123,
+        "mean_cv_rmse": 0.10178150143444518,
+        "model": "random_forest",
+        "outer_fold": 0,
+        "parameters": {
+          "criterion": "squared_error",
+          "max_depth": null,
+          "max_features": 0.75,
+          "min_samples_leaf": 5,
+          "n_estimators": 200,
+          "n_jobs": -1
+        },
+        "std_cv_mae": 0.0011827509925446482,
+        "std_cv_rmse": 0.0015084507515639798
+      }
+    },
+    "outer_fold": 0,
+    "selected_model": "random_forest",
+    "selected_parameters": {
+      "criterion": "squared_error",
+      "max_depth": null,
+      "max_features": 0.75,
+      "min_samples_leaf": 5,
+      "n_estimators": 200,
+      "n_jobs": -1
+    },
+    "selection_rationale": {
+      "best_inner_oof_mae": 0.08042987459658123,
+      "eligible_models": [
+        "random_forest",
+        "gradient_boosting"
+      ],
+      "inner_oof_mae_tolerance": 0.005,
+      "rule": "lowest_complexity_within_inner_oof_mae_tolerance_then_inner_oof_mae_then_fold_std",
+      "selected_complexity_rank": 2
+    },
+    "test_groups": 2602,
+    "test_rows": 2896,
+    "training_groups": 10404,
+    "training_rows": 11672
+  },
+  {
+    "inner_results": {
+      "gradient_boosting": {
+        "mean_cv_mae": 0.0829134284965867,
+        "mean_cv_rmse": 0.10459193583586682,
+        "model": "gradient_boosting",
+        "outer_fold": 1,
+        "parameters": {
+          "learning_rate": 0.07,
+          "loss": "squared_error",
+          "max_depth": 3,
+          "min_samples_leaf": 20,
+          "n_estimators": 200
+        },
+        "std_cv_mae": 0.0008596128608751958,
+        "std_cv_rmse": 0.000702190406533309
+      },
+      "random_forest": {
+        "mean_cv_mae": 0.08027726001979044,
+        "mean_cv_rmse": 0.1012262349689928,
+        "model": "random_forest",
+        "outer_fold": 1,
+        "parameters": {
+          "criterion": "squared_error",
+          "max_depth": null,
+          "max_features": 0.75,
+          "min_samples_leaf": 5,
+          "n_estimators": 200,
+          "n_jobs": -1
+        },
+        "std_cv_mae": 0.000923663782511194,
+        "std_cv_rmse": 0.0007912229145795489
+      }
+    },
+    "outer_fold": 1,
+    "selected_model": "random_forest",
+    "selected_parameters": {
+      "criterion": "squared_error",
+      "max_depth": null,
+      "max_features": 0.75,
+      "min_samples_leaf": 5,
+      "n_estimators": 200,
+      "n_jobs": -1
+    },
+    "selection_rationale": {
+      "best_inner_oof_mae": 0.08027726001979044,
+      "eligible_models": [
+        "random_forest",
+        "gradient_boosting"
+      ],
+      "inner_oof_mae_tolerance": 0.005,
+      "rule": "lowest_complexity_within_inner_oof_mae_tolerance_then_inner_oof_mae_then_fold_std",
+      "selected_complexity_rank": 2
+    },
+    "test_groups": 2601,
+    "test_rows": 2935,
+    "training_groups": 10405,
+    "training_rows": 11633
+  },
+  {
+    "inner_results": {
+      "gradient_boosting": {
+        "mean_cv_mae": 0.0832159615659803,
+        "mean_cv_rmse": 0.10499279976939022,
+        "model": "gradient_boosting",
+        "outer_fold": 2,
+        "parameters": {
+          "learning_rate": 0.07,
+          "loss": "squared_error",
+          "max_depth": 3,
+          "min_samples_leaf": 20,
+          "n_estimators": 200
+        },
+        "std_cv_mae": 0.0016854568343651448,
+        "std_cv_rmse": 0.0019072625598916578
+      },
+      "random_forest": {
+        "mean_cv_mae": 0.08101639169493594,
+        "mean_cv_rmse": 0.10207308758174446,
+        "model": "random_forest",
+        "outer_fold": 2,
+        "parameters": {
+          "criterion": "squared_error",
+          "max_depth": null,
+          "max_features": 0.75,
+          "min_samples_leaf": 5,
+          "n_estimators": 200,
+          "n_jobs": -1
+        },
+        "std_cv_mae": 0.0016700179128451822,
+        "std_cv_rmse": 0.0017780313475451066
+      }
+    },
+    "outer_fold": 2,
+    "selected_model": "random_forest",
+    "selected_parameters": {
+      "criterion": "squared_error",
+      "max_depth": null,
+      "max_features": 0.75,
+      "min_samples_leaf": 5,
+      "n_estimators": 200,
+      "n_jobs": -1
+    },
+    "selection_rationale": {
+      "best_inner_oof_mae": 0.08101639169493594,
+      "eligible_models": [
+        "random_forest",
+        "gradient_boosting"
+      ],
+      "inner_oof_mae_tolerance": 0.005,
+      "rule": "lowest_complexity_within_inner_oof_mae_tolerance_then_inner_oof_mae_then_fold_std",
+      "selected_complexity_rank": 2
+    },
+    "test_groups": 2601,
+    "test_rows": 2919,
+    "training_groups": 10405,
+    "training_rows": 11649
+  },
+  {
+    "inner_results": {
+      "gradient_boosting": {
+        "mean_cv_mae": 0.08362388433218743,
+        "mean_cv_rmse": 0.10544998867530435,
+        "model": "gradient_boosting",
+        "outer_fold": 3,
+        "parameters": {
+          "learning_rate": 0.07,
+          "loss": "squared_error",
+          "max_depth": 3,
+          "min_samples_leaf": 20,
+          "n_estimators": 200
+        },
+        "std_cv_mae": 0.000894096264294549,
+        "std_cv_rmse": 0.0013573523438236827
+      },
+      "random_forest": {
+        "mean_cv_mae": 0.08075414645409158,
+        "mean_cv_rmse": 0.1017706522307267,
+        "model": "random_forest",
+        "outer_fold": 3,
+        "parameters": {
+          "criterion": "squared_error",
+          "max_depth": null,
+          "max_features": 0.75,
+          "min_samples_leaf": 5,
+          "n_estimators": 200,
+          "n_jobs": -1
+        },
+        "std_cv_mae": 0.0007168970879378159,
+        "std_cv_rmse": 0.0010808781535055958
+      }
+    },
+    "outer_fold": 3,
+    "selected_model": "random_forest",
+    "selected_parameters": {
+      "criterion": "squared_error",
+      "max_depth": null,
+      "max_features": 0.75,
+      "min_samples_leaf": 5,
+      "n_estimators": 200,
+      "n_jobs": -1
+    },
+    "selection_rationale": {
+      "best_inner_oof_mae": 0.08075414645409158,
+      "eligible_models": [
+        "random_forest",
+        "gradient_boosting"
+      ],
+      "inner_oof_mae_tolerance": 0.005,
+      "rule": "lowest_complexity_within_inner_oof_mae_tolerance_then_inner_oof_mae_then_fold_std",
+      "selected_complexity_rank": 2
+    },
+    "test_groups": 2601,
+    "test_rows": 2905,
+    "training_groups": 10405,
+    "training_rows": 11663
+  },
+  {
+    "inner_results": {
+      "gradient_boosting": {
+        "mean_cv_mae": 0.08339906208253203,
+        "mean_cv_rmse": 0.10530708501503122,
+        "model": "gradient_boosting",
+        "outer_fold": 4,
+        "parameters": {
+          "learning_rate": 0.07,
+          "loss": "squared_error",
+          "max_depth": 3,
+          "min_samples_leaf": 20,
+          "n_estimators": 200
+        },
+        "std_cv_mae": 0.0013631916542130743,
+        "std_cv_rmse": 0.0014142636305821208
+      },
+      "random_forest": {
+        "mean_cv_mae": 0.0811101443145108,
+        "mean_cv_rmse": 0.1023966479650668,
+        "model": "random_forest",
+        "outer_fold": 4,
+        "parameters": {
+          "criterion": "squared_error",
+          "max_depth": null,
+          "max_features": 0.75,
+          "min_samples_leaf": 5,
+          "n_estimators": 200,
+          "n_jobs": -1
+        },
+        "std_cv_mae": 0.0007166347050362045,
+        "std_cv_rmse": 0.0007833023904273714
+      }
+    },
+    "outer_fold": 4,
+    "selected_model": "random_forest",
+    "selected_parameters": {
+      "criterion": "squared_error",
+      "max_depth": null,
+      "max_features": 0.75,
+      "min_samples_leaf": 5,
+      "n_estimators": 200,
+      "n_jobs": -1
+    },
+    "selection_rationale": {
+      "best_inner_oof_mae": 0.0811101443145108,
+      "eligible_models": [
+        "random_forest",
+        "gradient_boosting"
+      ],
+      "inner_oof_mae_tolerance": 0.005,
+      "rule": "lowest_complexity_within_inner_oof_mae_tolerance_then_inner_oof_mae_then_fold_std",
+      "selected_complexity_rank": 2
+    },
+    "test_groups": 2601,
+    "test_rows": 2913,
+    "training_groups": 10405,
+    "training_rows": 11655
+  }
+]

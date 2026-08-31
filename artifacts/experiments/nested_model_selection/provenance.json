@@ -1,0 +1,108 @@
+{
+  "completed_at_utc": "2026-08-31T03:42:03.751260+00:00",
+  "configuration": {
+    "combined_sha256": "048b0aff43d5a1551b4c8556b489492a4a711f794a5226501ed3733cb59fa6b6",
+    "complete_sha256": "b216592d8fb1feb255288040246a5ae3dcb87dd5f33383e61d6d398dee6b9d2a",
+    "files": {
+      "configs/evaluation.json": "322f5bafe42c86cdcc52cca8b3e98e1bba75f15775151006d6e4b46a74c6570b",
+      "configs/model_selection.json": "e89cf1b64db54fa13eb1294c64feab42d19b3fb497f5012aa9ddfadce448fa6b"
+    },
+    "values": {
+      "allow_dirty": false,
+      "dataset_manifest_path": "/private/tmp/decisionlab-official-release.9ZfssG/model/configs/choices13k_manifest.json",
+      "raw_dir": "/Users/nguyenq/decisionlab/data/raw"
+    }
+  },
+  "dataset": {
+    "checksums": {
+      "c13k_problems.json": "c6bdb0ae7e0d0ca127b649b4996a7a49b3d0c4c43e5f9a851677fe4527276632",
+      "c13k_selections.csv": "e21941718b83fd97a5997545489a66ce27bec3b3f62700a0774fb5f997fea5c7"
+    },
+    "manifest_sha256": "7aa8121ff2661cec64a2ccc3cab57430200350a2a17b4a70314ff97dda45bcd7",
+    "name": "choices13k",
+    "revision": "821ae7e88386b508ebb46fae76fac63cb62ec876",
+    "source_repository": "https://github.com/jcpeterson/choices13k"
+  },
+  "environment": {
+    "combined_sha256": "6f966e2ea0defc8cb8d428021aeae02b8273a7db4b89bcb2442fffcce3d483b7",
+    "environment_sha256": "cfe10f06e13d55f14514f30d64a9b1f0981ca889475199dd2034c147f1e8b46e",
+    "files": {
+      "pyproject.toml": "8ab71e76f792c7793ab96a6e01c605b832eefd914aff2894348a417c2bada07e",
+      "requirements-dev.lock": "fcf3241224b8eebf7465ae2694f79d788c9a15795a7df68d180857ce212ac5b9"
+    },
+    "runtime": {
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "python_implementation": "CPython",
+      "python_version": "3.14.2"
+    }
+  },
+  "experiment_name": "nested_grouped_model_selection_v3",
+  "fold_specification": {
+    "artifact_hashes": {
+      "fold_summary": "9b6e0f768ae848bc754df5d784f508140dd8902d755e0c7eef3e66dbf4079779",
+      "inner_assignments": "c3b6c3c484507cbc4d6eec87a76a779652dda8aa5b914a79ed06a9f8585bc909",
+      "outer_assignments": "644e7fad222599fd2aa1a8fe2ff55b88127b0a8b4ac00d9144f4ec8726bc091f"
+    },
+    "identifier": "nested_grouped_cv_v1"
+  },
+  "git": {
+    "commit_sha": "1499328a7b7ba1e7ec8ad450a7e345735f560e0a",
+    "is_dirty": false,
+    "status_porcelain": [],
+    "worktree_state": "clean"
+  },
+  "inputs": {
+    "combined_sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "files": {}
+  },
+  "legacy_artifacts_reused": false,
+  "outputs": {
+    "combined_sha256": "7979e17834290824c069494d8de84e216553a23e5a5ba61110e0c68d8192c3e8",
+    "files": {
+      "artifacts/experiments/nested_model_selection/experiment_config.json": "f4686cdad0f20d7b2e8b14eceaf2fe205a28d3055fa4f67367204090528d9629",
+      "artifacts/experiments/nested_model_selection/feature_names.json": "425f9fe919643cbadade3d8df70e123e381eeeb7e023cdb9645f8d96e595b751",
+      "artifacts/experiments/nested_model_selection/inner_tuning_results.csv": "cf54e9b5c409aa3fc317ed2250045307cdf7200aba9b0aeb388005ec324def9f",
+      "artifacts/experiments/nested_model_selection/metrics.json": "8d853d5f0674236b5b60af4ffff7e32d139d1d130589fbe368563e3a53194231",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_0.joblib": "f12ffa64c8849084f898a448b40d0fab571882114c172a5468d1b62b6f99400e",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_1.joblib": "1146c5844881c1433bf8f9c244b6b2a306cf57d90e2e0263160cee032a0cd319",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_2.joblib": "9541948c6c8abd4e2573afdcdfaeb2dd6a54de050b9e9faa5c6cf288f4680e7f",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_3.joblib": "d6523219380198e9689a842854b957a3b2af106415b7d723bfb4d7d057fff81c",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_4.joblib": "7cceb3b87cc997832ca189bde405b90bf686e85768ea73fea0cdee3a40ec742b",
+      "artifacts/experiments/nested_model_selection/outer_fold_selections.json": "219db102bb5e1856daf85f06db1e7054bf337cf8cf21f17122839f2567f46e43",
+      "artifacts/experiments/nested_model_selection/outer_oof_predictions.csv": "e8d1ad67bc05c1ddf073be9e37fd507f14c94f909f34b9efd58fbc16c01147af",
+      "artifacts/experiments/nested_model_selection/production_pipeline.joblib": "4723a8f5b02515d634cc4f1af581a4a5cf74e2b028ad836c7f8123fc92ee5abd",
+      "artifacts/manifests/feature_build_summary.json": "3eca64ca7117cfed764fa30de76a2afbb46eced9191733805e04fb8108b201fd",
+      "data/processed/choices13k_engineered_features.csv": "52b0d41899860e7ffe6f590fc02f62ffaf7592113f0b25d4858c6f195145e3b4",
+      "data/processed/choices13k_raw_features.csv": "ae79f8fc0b5fdee3283bbf025a07b100ae5f14ff9c20600082c541a936ccebe4",
+      "docs/features.md": "c140fe0a6412ab9d437929a6125b8327d0857c9d468ff43dbf89064ad093a402",
+      "reports/nested_model_selection.md": "05746cb0bf362b1a4c79fd2005c692d430066eb07ecb564d35a1347ffab97fc9",
+      "reports/tables/nested_model_comparison.csv": "edf8c41f1f27ec3a40d85d7ac4a6e39f2e9c4769c652a6f081d019ead828f4ac"
+    }
+  },
+  "pipeline_source": {
+    "combined_sha256": "b464d567e5a3a2484d92f44d5345a895ee77b3e9fe39092ca3c8c20137de9e58",
+    "files": {
+      "src/decisionlab/__init__.py": "058e17b94fa65db59d3470cc6c6666060b4a613162b7ea568febff816d2c7f77",
+      "src/decisionlab/data/fetch.py": "17eec2aa96d61311495cc6bb760331b86290f078e4184a3cd909f0b0ad6467f7",
+      "src/decisionlab/data/validation.py": "4d9838b7699822726b65e70e8a6bbceddf54c598e9c32fc390b4bc18b9c9a990",
+      "src/decisionlab/evaluation/metrics.py": "7c46f293bb0f3a8e1ade00065713227bd3cea9d586eeed25450cdff060b72337",
+      "src/decisionlab/evaluation/nested.py": "8f2315fc9005ea211a8eba588010044e5b19abd8e1bcb5a99f4c0a80ac81311d",
+      "src/decisionlab/evaluation/protocol.py": "123345b15f6daead50b2b5a979753972adb3cbbe6d81f7f762326bb3c7dbf627",
+      "src/decisionlab/evaluation/splitting.py": "0f9427dd9a827226e7f58b70b93e883f7839f58f3536d5a0f1f0d70a96e70d54",
+      "src/decisionlab/experiments/baselines.py": "ab39bf64c48cd219442b7f4a563cab81c5f1febe6e13585ed6c827ae2dee53eb",
+      "src/decisionlab/experiments/model_selection.py": "57929ac83390f3588c0d4f61aaf343616ffa2d6fa4334bce295c31244d583e84",
+      "src/decisionlab/experiments/provenance.py": "11297659a0dc66bf338cd033a96b2a5a94a32a784da8fdcd296b9dd1f56afe45",
+      "src/decisionlab/features/behavioral.py": "302fb516e3dbd0ac84a7528e32bff46728223787f7364b98cd6addb06845460c",
+      "src/decisionlab/models/baselines.py": "5a9301fd2bf2157ddc1365dff5e078731b0c513f93f7e2f492d3fb9c7206eefb",
+      "src/decisionlab/models/ensembles.py": "67cbf4f1e1c131be9a08a328fa93dac70106165bc8ab73361857cfe849049a27"
+    }
+  },
+  "provenance_file": {
+    "path": "artifacts/experiments/nested_model_selection/provenance.json",
+    "reason": "A manifest cannot include its own stable content hash.",
+    "self_hash_in_outputs": false
+  },
+  "provenance_schema": "decisionlab_run_provenance_v1",
+  "run_eligibility": "official_clean_commit",
+  "started_at_utc": "2026-08-31T03:31:22.131832+00:00"
+}

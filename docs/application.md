@@ -7,8 +7,9 @@ Random Forest model. Run it from the repository root with:
 streamlit run app.py
 ```
 
-The application loads and checksum-verifies the persisted model-selection
-pipeline, uses its exact saved feature order, and calls
+The application loads the official nested model-selection production pipeline and verifies it
+against both the model and behavioral provenance manifests. It uses the exact saved feature order
+and calls
 `engineer_scenario_features` from the production behavioral-feature module. The
 UI does not implement feature formulas.
 
@@ -44,6 +45,6 @@ This validation applies even when the service is called outside Streamlit.
 - Under ambiguity, the selected model still uses analyst-known design
   probabilities. The app labels this as an oracle/design prediction because
   participants did not observe those probabilities.
-- The displayed validation metric states whether it is the corrected equal-problem
-  estimate or a legacy condition-row estimate. Neither is a calibrated prediction
-  interval for a constructed scenario.
+- The displayed performance metric is the corrected equal-problem outer-OOF estimate. It is not a
+  calibrated prediction interval for a constructed scenario, and no confirmatory holdout is
+  claimed.

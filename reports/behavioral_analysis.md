@@ -1,61 +1,58 @@
 # Behavioral analysis of selected-model predictions
 
-> **Stale development-era artifact.** This analysis is not based on complete nested outer OOF
-> predictions and must not be presented as generalization evidence.
-
-This report interprets the selected Random Forest on the grouped validation split. It describes predictive associations and model sensitivity, not causal effects or participant-level psychological mechanisms. The locked test split was not used.
+This report interprets complete nested outer out-of-fold predictions. It describes predictive associations and model sensitivity, not causal effects or participant-level psychological mechanisms. No confirmatory holdout is claimed.
 
 ## Main findings
 
-- The three largest grouped permutation signals were expected value (0.0856), payoff and risk (0.0432), probability structure (0.0345). Values are increases in held-out MAE after jointly permuting each domain; larger values indicate greater predictive reliance.
-- The five largest individual permutation signals were `expected_value_difference_b_minus_a_oracle` (0.0646), `loss_probability_difference_b_minus_a_oracle` (0.0256), `maximum_payoff_difference_b_minus_a` (0.0183), `minimum_payoff_difference_b_minus_a` (0.0122), `expected_value_difference_oracle_x_feedback` (0.0067). Correlated and engineered features can divide or duplicate importance, so these should not be read as isolated effects.
-- Coherently switching feedback on while updating its EV interaction changed the mean prediction by +0.0063. Switching ambiguity on with its interaction changed it by +0.0408. These are model-sensitivity contrasts over synthetic feature settings, not treatment effects.
+- The three largest grouped permutation signals were expected value (0.0858), payoff and risk (0.0442), probability structure (0.0346). Values are increases in held-out MAE after jointly permuting each domain; larger values indicate greater predictive reliance.
+- The five largest individual permutation signals were `expected_value_difference_b_minus_a_oracle` (0.0610), `loss_probability_difference_b_minus_a_oracle` (0.0260), `maximum_payoff_difference_b_minus_a` (0.0196), `minimum_payoff_difference_b_minus_a` (0.0117), `expected_value_difference_oracle_x_feedback` (0.0077). Correlated and engineered features can divide or duplicate importance, so these should not be read as isolated effects.
+- Coherently switching feedback on while updating its EV interaction changed the mean prediction by +0.0055. Switching ambiguity on with its interaction changed it by +0.0427. These are model-sensitivity contrasts over synthetic feature settings, not treatment effects.
 - Validation-bin plots show how predictions and observations co-vary with expected-value, probability, payoff, and risk differences. They are observational predictive relationships and retain the oracle limitation under ambiguity.
-- Across the lowest-to-highest validation quantile bins, mean prediction changed from 0.289 to 0.716 for B-minus-A expected value and from 0.683 to 0.329 for relative loss probability. Thus, higher B expected value was associated with more predicted B choice, while higher relative B loss probability was associated with less.
-- The corresponding endpoint changes were 0.575 to 0.458 for relative payoff dispersion and 0.578 to 0.464 for relative best-payoff probability. Both curves are non-monotone, so endpoint contrasts should not be interpreted as constant slopes.
-- Near-equal-EV problems had MAE 0.0886, versus 0.0794 when B had lower EV and 0.0786 when B had higher EV. This is an error concentration, not evidence about causal difficulty.
+- Across the lowest-to-highest validation quantile bins, mean prediction changed from 0.303 to 0.724 for B-minus-A expected value and from 0.683 to 0.343 for relative loss probability. Thus, higher B expected value was associated with more predicted B choice, while higher relative B loss probability was associated with less.
+- The corresponding endpoint changes were 0.562 to 0.460 for relative payoff dispersion and 0.590 to 0.455 for relative best-payoff probability. Both curves are non-monotone, so endpoint contrasts should not be interpreted as constant slopes.
+- Near-equal-EV problems had MAE 0.0892, versus 0.0784 when B had lower EV and 0.0772 when B had higher EV. This is an error concentration, not evidence about causal difficulty.
 
 ## Normative benchmark versus observed behavior
 
 Expected-value maximization is used here only as a simple normative benchmark. ‘Strongly favors’ means `|EV_B − EV_A| ≥ 5` payoff units; aggregate humans favor B at `bRate ≥ 0.60` and A at `bRate ≤ 0.40`. These labels describe benchmark deviations, not irrational decisions.
 
-- EV strongly favored A while aggregate humans favored B in 16 validation rows.
-- EV strongly favored B while aggregate humans favored A in 25 validation rows.
-- 349 rows were highly divided, defined as `|bRate − 0.5| ≤ 0.05`.
-- The ML model successfully predicted 8 strong deviations, meaning it predicted the observed side of 0.5 with absolute error at most 0.08. It failed on 18, meaning it predicted the opposite side or had absolute error at least 0.15. Intermediate cases satisfy neither label.
+- EV strongly favored A while aggregate humans favored B in 156 outer OOF rows.
+- EV strongly favored B while aggregate humans favored A in 133 outer OOF rows.
+- 2287 rows were highly divided, defined as `|bRate − 0.5| ≤ 0.05`.
+- The ML model successfully predicted 74 strong deviations, meaning it predicted the observed side of 0.5 with absolute error at most 0.08. It failed on 134, meaning it predicted the opposite side or had absolute error at least 0.15. Intermediate cases satisfy neither label.
 
 ### Selected examples
 
 | Category | Problem | Gamble A | Gamble B | ΔEV B−A | Observed | ML prediction | Error |
 |---|---:|---|---|---:|---:|---:|---:|
-| strong ev a humans favor b | 7105 | p=1→-9; p=0→-9 | p=0.75→-42; p=0.0078125→42.5; p=0.0390625→43.5; p=0.078125→44.5; p=0.078125→45.5; p=0.0390625→46.5; p=0.0078125→47.5 | -11.25 | 0.600 | 0.518 | 0.082 |
-| strong ev a humans favor b | 8914 | p=0.4→32; p=0.6→0 | p=0.8→-16; p=0.2→76 | -10.40 | 0.613 | 0.447 | 0.166 |
-| strong ev b humans favor a | 7232 | p=0.1→57; p=0.9→27 | p=0.2→-30; p=0.8→62 | +13.60 | 0.373 | 0.391 | 0.018 |
-| strong ev b humans favor a | 4000 | p=0.6→27; p=0.4→19 | p=0.4→-20; p=0.3→72.5; p=0.3→73.5 | +12.00 | 0.358 | 0.449 | 0.091 |
-| highly divided | 8384 | p=1→12; p=0→12 | p=0.01→-1; p=0.495→12.5; p=0.495→13.5 | +0.86 | 0.500 | 0.551 | 0.051 |
-| highly divided | 5829 | p=1→6; p=0→6 | p=0.5→-50; p=0.25→83; p=0.125→81; p=0.0625→77; p=0.03125→69; p=0.015625→53; p=0.0078125→21; p=0.0078125→-43 | +7.50 | 0.500 | 0.566 | 0.066 |
-| ml successfully predicts deviation | 11340 | p=1→-2; p=0→-2 | p=0.4→-40; p=0.01875→10.5; p=0.09375→11.5; p=0.1875→12.5; p=0.1875→13.5; p=0.09375→14.5; p=0.01875→15.5 | -6.20 | 0.662 | 0.656 | 0.006 |
-| ml successfully predicts deviation | 1785 | p=1→-10; p=0→-10 | p=0.8→-27; p=0.0015625→19.5; p=0.0109375→20.5; p=0.0328125→21.5; p=0.0546875→22.5; p=0.0546875→23.5; p=0.0328125→24.5; p=0.0109375→25.5; p=0.0015625→26.5 | -7.00 | 0.680 | 0.667 | 0.013 |
-| ml fails to predict deviation | 5987 | p=0.5→25; p=0.5→3 | p=0.8→6; p=0.1→77; p=0.1→79 | +6.40 | 0.338 | 0.665 | 0.328 |
-| ml fails to predict deviation | 1518 | p=0.4→35; p=0.6→-38 | p=0.25→-42; p=0.375→15; p=0.1875→13; p=0.09375→9; p=0.046875→1; p=0.046875→-15 | +6.55 | 0.350 | 0.636 | 0.286 |
+| strong ev a humans favor b | 10989 | p=0.95→-4; p=0.05→-22 | p=0.8→-27; p=0.00625→15.5; p=0.03125→16.5; p=0.0625→17.5; p=0.0625→18.5; p=0.03125→19.5; p=0.00625→20.5 | -13.10 | 0.725 | 0.492 | 0.233 |
+| strong ev a humans favor b | 12534 | p=0.2→-1; p=0.8→-5 | p=0.99→-17; p=0.0003125→22.5; p=0.0015625→23.5; p=0.003125→24.5; p=0.003125→25.5; p=0.0015625→26.5; p=0.0003125→27.5 | -12.38 | 0.688 | 0.631 | 0.057 |
+| strong ev b humans favor a | 7232 | p=0.1→57; p=0.9→27 | p=0.2→-30; p=0.8→62 | +13.60 | 0.373 | 0.407 | 0.033 |
+| strong ev b humans favor a | 614 | p=0.95→9; p=0.05→-46 | p=0.75→-7; p=0.25→94 | +12.00 | 0.360 | 0.490 | 0.130 |
+| highly divided | 625 | p=1→16; p=0→16 | p=0.8→4; p=0.025→38.5; p=0.075→39.5; p=0.075→40.5; p=0.025→41.5 | -4.80 | 0.500 | 0.544 | 0.044 |
+| highly divided | 3744 | p=1→-5; p=0→-5 | p=0.9→-14; p=0.1→13 | -6.30 | 0.500 | 0.449 | 0.051 |
+| ml successfully predicts deviation | 8873 | p=1→-4; p=0→-4 | p=0.9→-20; p=0.1→84 | -5.60 | 0.675 | 0.669 | 0.006 |
+| ml successfully predicts deviation | 11667 | p=1→-1; p=0→-1 | p=0.99→-8; p=0.01→68 | -6.24 | 0.680 | 0.686 | 0.006 |
+| ml fails to predict deviation | 6716 | p=0.25→73; p=0.75→-32 | p=0.75→-39; p=0.125→59; p=0.0625→61; p=0.03125→65; p=0.03125→73 | -8.00 | 0.859 | 0.421 | 0.437 |
+| ml fails to predict deviation | 4945 | p=1→0; p=0→0 | p=0.99→-10; p=0.005→51; p=0.0025→49; p=0.00125→45; p=0.000625→37; p=0.000625→21 | -9.43 | 0.875 | 0.505 | 0.370 |
 
 [Normative comparison](figures/normative_vs_observed.png) and [case examples](figures/normative_case_examples.png) visualize these results. The complete case and example tables are saved as machine-readable CSV files.
 
 ## Error analysis
 
-| Slice | Rows | MAE | RMSE | Mean bias |
+| Slice | Rows | Groups | Problem-group MAE | Condition-row MAE |
 |---|---:|---:|---:|---:|
-| feedback: no feedback | 348 | 0.0823 | 0.1031 | +0.0025 |
-| feedback: feedback | 1,846 | 0.0806 | 0.1009 | -0.0038 |
-| ambiguity: known probabilities | 1,785 | 0.0803 | 0.1003 | -0.0023 |
-| ambiguity: ambiguous b | 409 | 0.0837 | 0.1049 | -0.0052 |
-| expected value regime: b lower ev | 839 | 0.0794 | 0.0995 | +0.0009 |
-| expected value regime: near equal ev | 427 | 0.0886 | 0.1109 | -0.0041 |
-| expected value regime: b higher ev | 928 | 0.0786 | 0.0981 | -0.0056 |
-| participant count: n at or below 16 | 1,479 | 0.0814 | 0.1018 | -0.0014 |
-| participant count: n above 16 | 715 | 0.0799 | 0.1000 | -0.0056 |
+| feedback: no feedback | 2,380 | 2,380 | 0.0855 | 0.0855 |
+| feedback: feedback | 12,188 | 12,188 | 0.0795 | 0.0795 |
+| ambiguity: known probabilities | 11,759 | 10,493 | 0.0788 | 0.0793 |
+| ambiguity: ambiguous b | 2,809 | 2,513 | 0.0849 | 0.0858 |
+| expected value regime: b lower ev | 5,844 | 5,222 | 0.0784 | 0.0788 |
+| expected value regime: near equal ev | 2,816 | 2,532 | 0.0892 | 0.0899 |
+| expected value regime: b higher ev | 5,908 | 5,252 | 0.0772 | 0.0778 |
+| participant count: n at or below 16 | 9,881 | 8,830 | 0.0817 | 0.0822 |
+| participant count: n above 16 | 4,687 | 4,639 | 0.0770 | 0.0769 |
 
-Participant-count groups use the training-set median (`n = 16`), not a validation-optimized cutoff. Expected-value regimes use the prespecified ±1 payoff-unit near-tie band.
+Participant-count groups use the complete development-data median (`n = 16`), not a validation-optimized cutoff. Expected-value regimes use the prespecified ±1 payoff-unit near-tie band.
 
 ## Figures
 
@@ -75,4 +72,4 @@ Participant-count groups use the training-set median (`n = 16`), not a validatio
 
 ## Reproducibility
 
-All plotted values are stored under `artifacts/analysis/behavioral/`. The analysis verifies the selected-model artifact hash, exact feature order, grouped validation assignments, and zero test predictions before producing outputs.
+All plotted values are stored under `artifacts/analysis/behavioral/`. The analysis verifies every outer-fold pipeline hash, exact feature order, complete OOF coverage, and structural-group isolation before producing outputs.

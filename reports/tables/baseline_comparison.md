@@ -1,3 +1,5 @@
+> **STALE / LEGACY:** This development-partition comparison predates the official nested grouped-CV evaluation. It is preserved only for historical comparison and must not be cited as current official performance. See `nested_baselines.csv` for the official outer-OOF results.
+
 | Baseline | MAE | RMSE | R² | n-weighted MAE | n-weighted RMSE |
 |---|---:|---:|---:|---:|---:|
 | `constant_training_mean` | 0.1834 | 0.2214 | -0.0000 | 0.1808 | 0.2195 |

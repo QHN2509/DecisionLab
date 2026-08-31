@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 from dataclasses import replace
 
 import joblib
@@ -112,36 +111,11 @@ def test_prediction_service_rejects_invalid_model_outputs(
         predict_scenario(_default_scenario(), invalid_bundle)
 
 
-def test_persisted_pipeline_reproduces_saved_validation_predictions(
-    bundle: PredictionBundle,
-) -> None:
-    with (
-        open(
-            "data/processed/choices13k_engineered_features.csv",
-            encoding="utf-8",
-            newline="",
-        ) as feature_source,
-        open(
-            "artifacts/experiments/model_selection/predictions_validation.csv",
-            encoding="utf-8",
-            newline="",
-        ) as prediction_source,
-    ):
-        feature_rows = list(csv.DictReader(feature_source))
-        prediction_rows = list(csv.DictReader(prediction_source))
-    row_indices = np.asarray([int(row["row_index"]) for row in prediction_rows])
-    features = np.asarray(
-        [
-            [float(feature_rows[index][name]) for name in bundle.feature_names]
-            for index in row_indices
-        ]
-    )
-    saved = np.asarray([float(row[bundle.selected_model]) for row in prediction_rows])
-
-    reproduced = bundle.pipeline.predict(features)
-
-    assert reproduced.shape == saved.shape
-    np.testing.assert_allclose(reproduced, saved, rtol=0.0, atol=5e-15)
+def test_bundle_uses_official_nested_outer_oof_metadata(bundle: PredictionBundle) -> None:
+    assert bundle.selected_model == "random_forest"
+    assert bundle.validation_metric_scope == "equal-structural-group outer OOF"
+    assert bundle.validation_mae == pytest.approx(0.08000781129428924)
+    assert bundle.oracle_feature_count == 10
 
 
 def test_production_pipeline_round_trip_is_reproducible(bundle: PredictionBundle, tmp_path) -> None:

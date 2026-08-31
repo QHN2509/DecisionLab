@@ -1,0 +1,128 @@
+{
+  "completed_at_utc": "2026-08-31T03:43:43.621916+00:00",
+  "configuration": {
+    "combined_sha256": "f10ff4ba1b0226c177ca386f653c3720096128c2e7a329e3376dbedd579403f7",
+    "complete_sha256": "4f88463070db75b0b72ddad8a3004ce65dfc653b634fe374061b1c257fe13291",
+    "files": {
+      "configs/behavioral_analysis.json": "14ad71ebae802050943aae380fdb2bb601cd221d97df3a82789e99eb1f1ffc76"
+    },
+    "values": {
+      "allow_dirty": false,
+      "model_experiment": "/private/tmp/decisionlab-official-release.9ZfssG/behavioral/artifacts/experiments/nested_model_selection"
+    }
+  },
+  "dataset": {
+    "checksums": {
+      "c13k_problems.json": "c6bdb0ae7e0d0ca127b649b4996a7a49b3d0c4c43e5f9a851677fe4527276632",
+      "c13k_selections.csv": "e21941718b83fd97a5997545489a66ce27bec3b3f62700a0774fb5f997fea5c7"
+    },
+    "manifest_sha256": "7aa8121ff2661cec64a2ccc3cab57430200350a2a17b4a70314ff97dda45bcd7",
+    "name": "choices13k",
+    "revision": "821ae7e88386b508ebb46fae76fac63cb62ec876",
+    "source_repository": "https://github.com/jcpeterson/choices13k"
+  },
+  "environment": {
+    "combined_sha256": "6f966e2ea0defc8cb8d428021aeae02b8273a7db4b89bcb2442fffcce3d483b7",
+    "environment_sha256": "cfe10f06e13d55f14514f30d64a9b1f0981ca889475199dd2034c147f1e8b46e",
+    "files": {
+      "pyproject.toml": "8ab71e76f792c7793ab96a6e01c605b832eefd914aff2894348a417c2bada07e",
+      "requirements-dev.lock": "fcf3241224b8eebf7465ae2694f79d788c9a15795a7df68d180857ce212ac5b9"
+    },
+    "runtime": {
+      "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+      "python_implementation": "CPython",
+      "python_version": "3.14.2"
+    }
+  },
+  "experiment_name": "behavioral_analysis_nested_outer_oof",
+  "fold_specification": {
+    "artifact_hashes": {
+      "fold_summary": "9b6e0f768ae848bc754df5d784f508140dd8902d755e0c7eef3e66dbf4079779",
+      "inner_assignments": "c3b6c3c484507cbc4d6eec87a76a779652dda8aa5b914a79ed06a9f8585bc909",
+      "outer_assignments": "644e7fad222599fd2aa1a8fe2ff55b88127b0a8b4ac00d9144f4ec8726bc091f"
+    },
+    "identifier": "nested_grouped_cv_v1"
+  },
+  "git": {
+    "commit_sha": "1499328a7b7ba1e7ec8ad450a7e345735f560e0a",
+    "is_dirty": false,
+    "status_porcelain": [],
+    "worktree_state": "clean"
+  },
+  "inputs": {
+    "combined_sha256": "992222cfb0f13f641449bb7db43329aa8d26f76049102a05aca8a0866d755df0",
+    "files": {
+      "artifacts/experiments/nested_model_selection/feature_names.json": "425f9fe919643cbadade3d8df70e123e381eeeb7e023cdb9645f8d96e595b751",
+      "artifacts/experiments/nested_model_selection/metrics.json": "8d853d5f0674236b5b60af4ffff7e32d139d1d130589fbe368563e3a53194231",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_0.joblib": "f12ffa64c8849084f898a448b40d0fab571882114c172a5468d1b62b6f99400e",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_1.joblib": "1146c5844881c1433bf8f9c244b6b2a306cf57d90e2e0263160cee032a0cd319",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_2.joblib": "9541948c6c8abd4e2573afdcdfaeb2dd6a54de050b9e9faa5c6cf288f4680e7f",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_3.joblib": "d6523219380198e9689a842854b957a3b2af106415b7d723bfb4d7d057fff81c",
+      "artifacts/experiments/nested_model_selection/outer_fold_pipelines/fold_4.joblib": "7cceb3b87cc997832ca189bde405b90bf686e85768ea73fea0cdee3a40ec742b",
+      "artifacts/experiments/nested_model_selection/outer_oof_predictions.csv": "e8d1ad67bc05c1ddf073be9e37fd507f14c94f909f34b9efd58fbc16c01147af",
+      "artifacts/experiments/nested_model_selection/provenance.json": "9cc56ed807f78c2ae6aaf1d33e89e7ddf724daaef0340580f732856df58f08ab",
+      "data/processed/choices13k_engineered_features.csv": "52b0d41899860e7ffe6f590fc02f62ffaf7592113f0b25d4858c6f195145e3b4"
+    }
+  },
+  "legacy_artifacts_reused": false,
+  "outputs": {
+    "combined_sha256": "37bf768380abb6f4e3669528bb310126f55354da881881525d6e85564598b9a2",
+    "files": {
+      "artifacts/analysis/behavioral/condition_sensitivity.csv": "d70c74a6020dda2870a23723336218e966675bae2f36edff260c3c8c2f4ad52c",
+      "artifacts/analysis/behavioral/error_slices.csv": "157e1a0bc0a082f28568997bd726893ab5a7972144b54efdddc11bc1bc133ef3",
+      "artifacts/analysis/behavioral/normative_cases.csv": "4190e12dbd39f4ff8067c960e5f6341f385e4716f9a711d9b6ba249a87392d5f",
+      "artifacts/analysis/behavioral/normative_examples.csv": "4b51eecd68a2d567041b6959a650c0c7b7d14ab92816059ff3ba78e7e5aa63dd",
+      "artifacts/analysis/behavioral/permutation_importance_domains.csv": "e633f226b3c57b555130367958d33f31bc26b96ff77e1c0a304f77294e2b78e9",
+      "artifacts/analysis/behavioral/permutation_importance_features.csv": "401d963ea861dd301c4be1a3d5813489899d0655e61e7c795915d64ff5caf7c4",
+      "artifacts/analysis/behavioral/prediction_relationships.csv": "18504abb2b864c36bf475681dfffce789b893f97279e2532a8eafca14aaa4526",
+      "artifacts/analysis/behavioral/statistics.json": "2105eafc6a59822836a13d894ff411bba8844324aefae0cf841bd72a7e502c75",
+      "reports/behavioral_analysis.md": "9d2944c1536ae8e713c59427b3d77c8ff48478d55a4fc369c5165e06339e3e25",
+      "reports/figures/behavioral_condition_sensitivity.png": "5c982aa257e676891a4c553e65f07db4a824b95557e2779fb17eb77147904719",
+      "reports/figures/behavioral_error_slices.png": "7ab1c73e96258665d9f022b91de06034c2e6b2e7eb62a173d61e89db82e4e7bf",
+      "reports/figures/behavioral_permutation_importance.png": "475b39b325970416007ed9e7e97509dc38c1bf63435617c38eb42f94c91c54bd",
+      "reports/figures/behavioral_prediction_relationships.png": "2247d68642a96aa812ac0a3d951830dbe78fe3ac2d598b548ed9cc547c22d197",
+      "reports/figures/normative_case_examples.png": "b93e8298ae8d08e3e24c250420315810611b9815677f1f6353edf0ba10241945",
+      "reports/figures/normative_vs_observed.png": "c71e8b5087b2954d2686fcdc7eeea6ef2ded6fb15c778d3365b2e42e46b7c8b3"
+    }
+  },
+  "post_generation_amendments": [
+    {
+      "amended_at_utc": "2026-08-31T03:59:36Z",
+      "experiment_rerun": false,
+      "files": {
+        "reports/behavioral_analysis.md": {
+          "amended_sha256": "9d2944c1536ae8e713c59427b3d77c8ff48478d55a4fc369c5165e06339e3e25",
+          "original_sha256": "bf9927a31da070897757287e705aea1ef649ea37eaab6abd98f22f885382a254"
+        }
+      },
+      "metrics_changed": false,
+      "reason": "Documentation-only correction: identify the participant-count threshold as the complete development-data median."
+    }
+  ],
+  "pipeline_source": {
+    "combined_sha256": "50c7690bcf146165718d877d806578c82381c4f67cb80bc7834d7dfa1237e5ed",
+    "files": {
+      "src/decisionlab/__init__.py": "058e17b94fa65db59d3470cc6c6666060b4a613162b7ea568febff816d2c7f77",
+      "src/decisionlab/analysis/behavioral.py": "715f41309ffffca4d7f12b9ee9f85743e8f97c0f960c4b8c6a36daa202216363",
+      "src/decisionlab/data/fetch.py": "17eec2aa96d61311495cc6bb760331b86290f078e4184a3cd909f0b0ad6467f7",
+      "src/decisionlab/data/validation.py": "4d9838b7699822726b65e70e8a6bbceddf54c598e9c32fc390b4bc18b9c9a990",
+      "src/decisionlab/evaluation/metrics.py": "7c46f293bb0f3a8e1ade00065713227bd3cea9d586eeed25450cdff060b72337",
+      "src/decisionlab/evaluation/nested.py": "8f2315fc9005ea211a8eba588010044e5b19abd8e1bcb5a99f4c0a80ac81311d",
+      "src/decisionlab/evaluation/oof.py": "d8bb6a9037b88676637e0ea16332569da7a0f1651319212c217da3ecec3e1122",
+      "src/decisionlab/evaluation/protocol.py": "123345b15f6daead50b2b5a979753972adb3cbbe6d81f7f762326bb3c7dbf627",
+      "src/decisionlab/evaluation/splitting.py": "0f9427dd9a827226e7f58b70b93e883f7839f58f3536d5a0f1f0d70a96e70d54",
+      "src/decisionlab/experiments/baselines.py": "ab39bf64c48cd219442b7f4a563cab81c5f1febe6e13585ed6c827ae2dee53eb",
+      "src/decisionlab/experiments/provenance.py": "11297659a0dc66bf338cd033a96b2a5a94a32a784da8fdcd296b9dd1f56afe45",
+      "src/decisionlab/features/behavioral.py": "302fb516e3dbd0ac84a7528e32bff46728223787f7364b98cd6addb06845460c",
+      "src/decisionlab/models/baselines.py": "5a9301fd2bf2157ddc1365dff5e078731b0c513f93f7e2f492d3fb9c7206eefb"
+    }
+  },
+  "provenance_file": {
+    "path": "artifacts/analysis/behavioral/provenance.json",
+    "reason": "A manifest cannot include its own stable content hash.",
+    "self_hash_in_outputs": false
+  },
+  "provenance_schema": "decisionlab_run_provenance_v1",
+  "run_eligibility": "official_clean_commit",
+  "started_at_utc": "2026-08-31T03:42:53.711981+00:00"
+}

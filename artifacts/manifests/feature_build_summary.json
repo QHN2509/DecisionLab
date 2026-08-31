@@ -42,7 +42,6 @@
     "outer_fold",
     "inner_fold"
   ],
-  "generated_at_utc": "2026-08-30T15:07:04.756085+00:00",
   "identifier_columns_not_features": [
     "row_index",
     "problem"

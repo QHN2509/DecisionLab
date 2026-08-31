@@ -12,6 +12,7 @@ import joblib
 import numpy as np
 
 from decisionlab.data.fetch import sha256_file
+from decisionlab.experiments.provenance import validate_upstream_artifacts
 from decisionlab.features.behavioral import (
     ScenarioFeatureInput,
     engineer_scenario_features,
@@ -19,15 +20,19 @@ from decisionlab.features.behavioral import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-MODEL_SELECTION_DIR = PROJECT_ROOT / "artifacts" / "experiments" / "model_selection"
+MODEL_SELECTION_DIR = PROJECT_ROOT / "artifacts" / "experiments" / "nested_model_selection"
 DEFAULT_MODEL_METRICS = MODEL_SELECTION_DIR / "metrics.json"
-DEFAULT_PIPELINE = MODEL_SELECTION_DIR / "selected_pipeline.joblib"
+DEFAULT_PIPELINE = MODEL_SELECTION_DIR / "production_pipeline.joblib"
 DEFAULT_FEATURE_NAMES = MODEL_SELECTION_DIR / "feature_names.json"
+DEFAULT_MODEL_PROVENANCE = MODEL_SELECTION_DIR / "provenance.json"
 DEFAULT_ENGINEERED_FEATURES = (
     PROJECT_ROOT / "data" / "processed" / "choices13k_engineered_features.csv"
 )
 DEFAULT_BEHAVIORAL_STATISTICS = (
     PROJECT_ROOT / "artifacts" / "analysis" / "behavioral" / "statistics.json"
+)
+DEFAULT_BEHAVIORAL_PROVENANCE = (
+    PROJECT_ROOT / "artifacts" / "analysis" / "behavioral" / "provenance.json"
 )
 
 SHAPE_LABELS = {
@@ -94,31 +99,38 @@ def load_prediction_bundle(
     feature_names_path: Path = DEFAULT_FEATURE_NAMES,
     feature_reference_path: Path = DEFAULT_ENGINEERED_FEATURES,
     behavioral_statistics_path: Path = DEFAULT_BEHAVIORAL_STATISTICS,
+    model_provenance_path: Path = DEFAULT_MODEL_PROVENANCE,
+    behavioral_provenance_path: Path = DEFAULT_BEHAVIORAL_PROVENANCE,
 ) -> PredictionBundle:
     """Load and verify every artifact used for interactive prediction."""
+    model_provenance = validate_upstream_artifacts(
+        model_provenance_path,
+        [metrics_path, pipeline_path, feature_names_path, feature_reference_path],
+    )
+    validate_upstream_artifacts(
+        behavioral_provenance_path,
+        [behavioral_statistics_path],
+    )
     metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
     feature_document = json.loads(feature_names_path.read_text(encoding="utf-8"))
     behavioral = json.loads(behavioral_statistics_path.read_text(encoding="utf-8"))
-    if metrics["test_rows_predicted"] != 0 or metrics["test_metrics_computed"]:
-        raise ValueError("Selected model no longer satisfies the locked-test contract")
-    expected_hash = metrics["outputs"][
-        "artifacts/experiments/model_selection/selected_pipeline.joblib"
+    if metrics["confirmatory_holdout"] is not False:
+        raise ValueError("Nested experiment must not claim a confirmatory holdout")
+    if metrics["headline_source"] != "complete_outer_out_of_fold_predictions":
+        raise ValueError("Application metrics must come from complete outer OOF predictions")
+    expected_hash = model_provenance["outputs"]["files"][
+        "artifacts/experiments/nested_model_selection/production_pipeline.joblib"
     ]
     if sha256_file(pipeline_path) != expected_hash:
         raise ValueError("Selected pipeline hash does not match experiment metadata")
     feature_names = feature_document["feature_names"]
     if feature_names != metrics["feature_names"]:
         raise ValueError("Feature order differs between saved model artifacts")
-    if behavioral["selected_pipeline_sha256"] != expected_hash:
-        raise ValueError("Behavioral interpretation refers to a different selected pipeline")
-    selected = metrics["selected_model"]
-    validation_metrics = metrics["candidates"][selected]["validation_metrics"]
-    if "problem_group_equal_weighted" in validation_metrics:
-        selected_metrics = validation_metrics["problem_group_equal_weighted"]
-        validation_metric_scope = "equal-structural-group"
-    else:
-        selected_metrics = validation_metrics["unweighted"]
-        validation_metric_scope = "legacy condition-row"
+    if behavioral["model_metrics_sha256"] != sha256_file(metrics_path):
+        raise ValueError("Behavioral interpretation refers to different model metrics")
+    selected = metrics["production_model"]["name"]
+    selected_metrics = metrics["primary_metrics"]
+    validation_metric_scope = "equal-structural-group outer OOF"
     return PredictionBundle(
         pipeline=joblib.load(pipeline_path),
         feature_names=feature_names,

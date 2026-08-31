@@ -74,10 +74,19 @@ Mathematical definitions and per-feature leakage assessments are in
 
 ## Model results
 
-Official nested-CV results are pending. Existing experiment metrics, model-selection
-reports, behavioral reports, error reports, tables, figures, and serialized models
-were generated from development-era partitions and are explicitly stale. They are
-retained only for provenance and are not headline evidence.
+Official results were regenerated from clean DecisionLab commit `1499328a` using five outer and
+five inner structural-group folds. The inner-selected procedure—Random Forest in every outer
+fold—achieved equal-problem outer-OOF MAE **0.0800** (95% structural-group bootstrap interval
+0.0789–0.0810), RMSE **0.1011**, and R² **0.7923**. Secondary condition-row MAE was 0.0805 and
+participant-count-weighted MAE was 0.0801. These are development-data generalization estimates,
+not results from an untouched confirmatory holdout.
+
+The strongest simple baseline was the shallow decision tree (equal-problem MAE 0.0950), followed
+by ridge regression (0.1167), the constant mean (0.1836), and the deliberately hard expected-value
+rule (0.3614). The latter predicts only 0, 0.5, or 1 and is a behavioral benchmark rather than a
+calibrated aggregate-choice model. Machine-readable comparisons are in
+[`reports/tables/nested_baselines.csv`](reports/tables/nested_baselines.csv) and
+[`reports/tables/nested_model_comparison.csv`](reports/tables/nested_model_comparison.csv).
 
 New feature, EDA, experiment, and downstream analysis runs automatically record Git state,
 dataset and complete configuration hashes, environment lock hashes, transitive pipeline-source
@@ -86,10 +95,10 @@ refused by default; an explicit override is marked non-official. Behavioral and 
 also require regenerated model provenance, so legacy artifacts cannot silently become current. See
 [docs/provenance.md](docs/provenance.md).
 
-The replacement experiment will report pooled outer OOF equal-problem MAE as its
-headline, with condition-row and participant-count-weighted metrics labeled as
-secondary. It will compare the complete inner-selection procedure and independently
-tuned candidate families on identical outer folds.
+The pooled outer-OOF equal-problem metric is the headline; condition-row and
+participant-count-weighted metrics are secondary. Random Forest outperformed Gradient Boosting on
+the same outer folds (equal-problem MAE 0.0800 versus 0.0830) and was selected independently in
+each outer fold using inner OOF results only.
 
 ### What the expected-value baseline teaches
 
@@ -100,15 +109,17 @@ deviation from this simple benchmark, not evidence of irrationality.
 
 ## Behavioral interpretation
 
-Generalization-oriented behavioral, normative, and error analyses will be
-regenerated from complete outer OOF predictions. Model sensitivity computed from
-a full-data production fit will be labeled descriptive rather than held-out evidence.
-No existing numeric interpretation is currently treated as official.
+Behavioral, normative, and error analyses were regenerated from complete outer OOF predictions.
+Expected-value structure, payoff/risk structure, and probability structure had the largest
+permutation signals. These results describe predictive association and model sensitivity—not
+causal effects or participant-level mechanisms. See
+[`reports/behavioral_analysis.md`](reports/behavioral_analysis.md) and
+[`reports/error_analysis.md`](reports/error_analysis.md).
 
 ## Interactive research dashboard
 
-After official nested-CV artifacts are regenerated and wired into deployment, the
-Streamlit application lets a user construct a supported risky-choice problem and displays:
+Using the regenerated official nested-CV artifacts, the Streamlit application lets a user
+construct a supported risky-choice problem and displays:
 
 - both gamble distributions and their expected values;
 - the simple expected-value benchmark;
@@ -117,9 +128,11 @@ Streamlit application lets a user construct a supported risky-choice problem and
 - coherent feedback and ambiguity what-if comparisons;
 - warnings when engineered values fall outside the training range.
 
-The checked-in application still references the stale development-era serialized model and must
-not currently be presented with official performance claims. Feature formulas remain shared with
-the research pipeline rather than duplicated in the UI.
+The application loads the official production pipeline under
+`artifacts/experiments/nested_model_selection/` and verifies its model and behavioral provenance
+before prediction. Its displayed error is the outer-OOF dataset estimate, not an uncertainty
+interval for the constructed scenario. Feature formulas remain shared with the research pipeline
+rather than duplicated in the UI.
 
 ## Limitations
 

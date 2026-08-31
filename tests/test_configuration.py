@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import tomllib
+from csv import DictReader
 from pathlib import Path
 
 import pytest
@@ -78,3 +79,48 @@ def test_readme_clean_workflow_commands_are_complete_and_ordered() -> None:
 
     positions = [readme.index(command) for command in commands]
     assert positions == sorted(positions)
+
+
+def test_official_analysis_reports_describe_the_recorded_oof_scope() -> None:
+    behavioral = Path("reports/behavioral_analysis.md").read_text(encoding="utf-8")
+    errors = Path("reports/error_analysis.md").read_text(encoding="utf-8")
+    statistics = json.loads(
+        Path("artifacts/analysis/behavioral/statistics.json").read_text(encoding="utf-8")
+    )
+
+    assert statistics["participant_count_threshold_source"] == "development_data_median"
+    assert "complete development-data median (`n = 16`)" in behavioral
+    assert "complete nested outer out-of-fold predictions" in errors
+    assert "post-selection analysis on validation data" not in errors
+
+
+@pytest.mark.parametrize(
+    ("markdown_path", "csv_path", "official_table"),
+    [
+        (
+            Path("reports/tables/baseline_comparison.md"),
+            Path("reports/tables/baseline_comparison.csv"),
+            "nested_baselines.csv",
+        ),
+        (
+            Path("reports/tables/model_comparison.md"),
+            Path("reports/tables/model_comparison.csv"),
+            "nested_model_comparison.csv",
+        ),
+    ],
+)
+def test_legacy_comparison_tables_are_unambiguously_labeled(
+    markdown_path: Path,
+    csv_path: Path,
+    official_table: str,
+) -> None:
+    markdown = markdown_path.read_text(encoding="utf-8")
+    with csv_path.open(encoding="utf-8", newline="") as csv_file:
+        rows = list(DictReader(csv_file))
+
+    assert markdown.startswith("> **STALE / LEGACY:**")
+    assert official_table in markdown
+    assert rows
+    assert {row["artifact_status"] for row in rows} == {"stale_legacy"}
+    assert all("Not part of the current official" in row["artifact_note"] for row in rows)
+    assert all(official_table in row["artifact_note"] for row in rows)

@@ -713,8 +713,9 @@ def write_error_report(statistics: dict[str, Any]) -> None:
             "",
             "## Interpretation limits",
             "",
-            "- This is post-selection analysis on validation data; it is exploratory and does "
-            "are exploratory generalization diagnostics, not independent confirmatory evidence.",
+            "- This post-selection analysis uses complete nested outer out-of-fold predictions. "
+            "It provides exploratory generalization diagnostics, not independent confirmatory "
+            "evidence.",
             "- Regimes overlap, so their error differences are not independent effects. The "
             "bootstrap intervals quantify group-resampling variation, not causal uncertainty.",
             "- The extreme-EV threshold uses raw payoff units and is therefore scale-dependent.",

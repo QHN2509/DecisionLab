@@ -173,7 +173,7 @@ def _render_prediction(result, bundle) -> None:
             + ". Treat the prediction as extrapolation."
         )
     st.caption(
-        f"Reference {bundle.validation_metric_scope} validation performance: "
+        f"Reference {bundle.validation_metric_scope} performance: "
         f"MAE {bundle.validation_mae:.3f}, RMSE "
         f"{bundle.validation_rmse:.3f}. These are dataset-level errors, not a calibrated "
         "interval for this scenario."
@@ -269,7 +269,7 @@ def main() -> None:
     )
     st.caption(
         f"Selected model: {bundle.selected_model.replace('_', ' ')} · "
-        f"choices13k source commit {bundle.source_commit[:12]} · locked test set not evaluated"
+        f"choices13k source commit {bundle.source_commit[:12]} · no confirmatory holdout claimed"
     )
 
 

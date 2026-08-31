@@ -1,0 +1,66 @@
+{
+  "evaluation_design": "nested_grouped_cv_v1",
+  "experiment_name": "nested_grouped_model_selection_v3",
+  "feature_set": "engineered_design_oracle_v1",
+  "gradient_boosting": {
+    "complexity_rank": 3,
+    "fixed": {
+      "loss": "squared_error",
+      "min_samples_leaf": 20
+    },
+    "grid": {
+      "learning_rate": [
+        0.03,
+        0.07
+      ],
+      "max_depth": [
+        2,
+        3
+      ],
+      "n_estimators": [
+        100,
+        200
+      ]
+    },
+    "interpretability": "moderate-low: sequential trees support global importance but interact nonlinearly"
+  },
+  "nested_cross_validation": {
+    "inner_folds": 5,
+    "inner_seed": 20260831,
+    "outer_folds": 5,
+    "outer_seed": 20260830,
+    "primary_metric": "problem_group_equal_weighted_mae"
+  },
+  "random_forest": {
+    "complexity_rank": 2,
+    "fixed": {
+      "criterion": "squared_error",
+      "n_estimators": 200,
+      "n_jobs": -1
+    },
+    "grid": {
+      "max_depth": [
+        8,
+        null
+      ],
+      "max_features": [
+        "sqrt",
+        0.75
+      ],
+      "min_samples_leaf": [
+        5,
+        20
+      ]
+    },
+    "interpretability": "moderate: impurity importances and partial dependence are available"
+  },
+  "random_seed": 20260827,
+  "selection": {
+    "inner_oof_mae_tolerance": 0.005,
+    "rule": "lowest_complexity_within_inner_oof_mae_tolerance_then_inner_oof_mae_then_fold_std"
+  },
+  "xgboost": {
+    "enabled": false,
+    "reason": "Excluded from this milestone because it adds a large optional dependency and overlaps the tested gradient-boosting role; revisit only if sklearn ensembles leave a material performance gap."
+  }
+}

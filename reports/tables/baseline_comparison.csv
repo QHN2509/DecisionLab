@@ -1,5 +1,5 @@
-model,mae,rmse,r2,weighted_mae,weighted_rmse
-constant_training_mean,0.18340398754604562,0.22138591971575877,-2.5733831690022413e-06,0.18081614513614958,0.2195378018571091
-expected_value_hard_rule_oracle,0.3599038056448131,0.4044204655841032,-2.337085817301321,0.3615270589879165,0.40564985544536064
-ridge_engineered_oracle,0.11589218318473726,0.1450728541741928,0.5705887318704587,0.1153479500183059,0.14469586210824542
-shallow_decision_tree_engineered_oracle,0.09524940247284694,0.120200892771311,0.705207444305771,0.09509626865167631,0.11997562243345136
+artifact_status,artifact_note,model,mae,rmse,r2,weighted_mae,weighted_rmse
+stale_legacy,Not part of the current official nested grouped-CV evaluation; see nested_baselines.csv,constant_training_mean,0.18340398754604562,0.22138591971575877,-2.5733831690022413e-06,0.18081614513614958,0.2195378018571091
+stale_legacy,Not part of the current official nested grouped-CV evaluation; see nested_baselines.csv,expected_value_hard_rule_oracle,0.3599038056448131,0.4044204655841032,-2.337085817301321,0.3615270589879165,0.40564985544536064
+stale_legacy,Not part of the current official nested grouped-CV evaluation; see nested_baselines.csv,ridge_engineered_oracle,0.11589218318473726,0.1450728541741928,0.5705887318704587,0.1153479500183059,0.14469586210824542
+stale_legacy,Not part of the current official nested grouped-CV evaluation; see nested_baselines.csv,shallow_decision_tree_engineered_oracle,0.09524940247284694,0.120200892771311,0.705207444305771,0.09509626865167631,0.11997562243345136
