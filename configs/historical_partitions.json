@@ -1,0 +1,9 @@
+{
+  "split_seed": "decisionlab-structural-groups-v1",
+  "train_fraction": 0.70,
+  "validation_fraction": 0.15,
+  "test_fraction": 0.15,
+  "primary_metric": "problem_group_equal_weighted_mae",
+  "secondary_metrics": ["condition_row_mae", "condition_row_rmse", "condition_row_r2", "condition_row_mean_bias"],
+  "weighted_sensitivity_metrics": ["mae", "rmse", "r2", "mean_bias"]
+}

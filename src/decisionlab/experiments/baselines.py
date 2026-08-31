@@ -18,15 +18,31 @@ from decisionlab import __version__
 from decisionlab.data.fetch import DEFAULT_DESTINATION, DEFAULT_MANIFEST, sha256_file
 from decisionlab.data.validation import load_selections
 from decisionlab.evaluation.metrics import evaluate_brate_predictions
-from decisionlab.evaluation.protocol import (
-    DEFAULT_ASSIGNMENTS,
-    build_evaluation_protocol,
+from decisionlab.evaluation.nested import (
+    DEFAULT_CONFIG as DEFAULT_NESTED_EVALUATION_CONFIG,
 )
-from decisionlab.evaluation.protocol import (
-    DEFAULT_CONFIG as DEFAULT_EVALUATION_CONFIG,
+from decisionlab.evaluation.nested import (
+    DEFAULT_INNER_ASSIGNMENTS,
+    DEFAULT_OUTER_ASSIGNMENTS,
+    build_nested_cv_assignments,
+    read_inner_assignments,
+    read_outer_assignments,
+)
+from decisionlab.evaluation.nested import (
+    DEFAULT_SUMMARY as DEFAULT_FOLD_SUMMARY,
+)
+from decisionlab.evaluation.protocol import DEFAULT_ASSIGNMENTS, build_evaluation_protocol
+from decisionlab.evaluation.protocol import DEFAULT_CONFIG as DEFAULT_EVALUATION_CONFIG
+from decisionlab.experiments.provenance import (
+    finalize_run_provenance,
+    start_run_provenance,
+)
+from decisionlab.features.behavioral import (
+    DEFAULT_DOCUMENTATION as DEFAULT_FEATURE_DOCUMENTATION,
 )
 from decisionlab.features.behavioral import (
     DEFAULT_ENGINEERED_FEATURES,
+    DEFAULT_RAW_FEATURES,
     build_feature_tables,
 )
 from decisionlab.features.behavioral import (
@@ -42,14 +58,17 @@ from decisionlab.models.baselines import (
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = PROJECT_ROOT / "configs" / "baselines.json"
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "artifacts" / "experiments" / "baselines"
+DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "artifacts" / "experiments" / "nested_baselines"
 DEFAULT_METRICS = DEFAULT_OUTPUT_DIR / "metrics.json"
-DEFAULT_PREDICTIONS = DEFAULT_OUTPUT_DIR / "predictions_validation.csv"
+DEFAULT_PREDICTIONS = DEFAULT_OUTPUT_DIR / "outer_oof_predictions.csv"
 DEFAULT_RIDGE_VALUES = DEFAULT_OUTPUT_DIR / "ridge_coefficients.csv"
 DEFAULT_TREE_VALUES = DEFAULT_OUTPUT_DIR / "tree_feature_importances.csv"
 DEFAULT_COMPARISON_CSV = PROJECT_ROOT / "reports" / "tables" / "baseline_comparison.csv"
 DEFAULT_COMPARISON_MD = PROJECT_ROOT / "reports" / "tables" / "baseline_comparison.md"
 DEFAULT_REPORT = PROJECT_ROOT / "reports" / "baselines.md"
+DEFAULT_NESTED_COMPARISON = PROJECT_ROOT / "reports" / "tables" / "nested_baselines.csv"
+DEFAULT_NESTED_REPORT = PROJECT_ROOT / "reports" / "nested_baselines.md"
+DEFAULT_PROVENANCE = DEFAULT_OUTPUT_DIR / "provenance.json"
 
 MODEL_ORDER = (
     "constant_training_mean",
@@ -77,7 +96,7 @@ def load_baseline_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         config = json.load(source)
     required = {
         "experiment_name",
-        "evaluation_split",
+        "evaluation_design",
         "feature_set",
         "random_seed",
         "ridge",
@@ -86,8 +105,8 @@ def load_baseline_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
     }
     if set(config) != required:
         raise ValueError(f"Baseline config must define exactly: {sorted(required)}")
-    if config["evaluation_split"] != "validation":
-        raise ValueError("Baseline experiments may evaluate only the validation split")
+    if config["evaluation_design"] != "nested_grouped_cv_v1":
+        raise ValueError("Baselines require nested grouped outer folds")
     if config["feature_set"] != "engineered_design_oracle_v1":
         raise ValueError("Unexpected baseline feature set")
     if config["ridge"] != {
@@ -244,9 +263,18 @@ def _comparison_rows(metrics: dict[str, Any]) -> list[dict[str, Any]]:
     return [
         {
             "model": name,
-            "mae": metrics["models"][name]["metrics"]["unweighted"]["mae"],
-            "rmse": metrics["models"][name]["metrics"]["unweighted"]["rmse"],
-            "r2": metrics["models"][name]["metrics"]["unweighted"]["r2"],
+            "problem_group_mae": metrics["models"][name]["metrics"]["problem_group_equal_weighted"][
+                "mae"
+            ],
+            "condition_row_mae": metrics["models"][name]["metrics"]["condition_row_unweighted"][
+                "mae"
+            ],
+            "condition_row_rmse": metrics["models"][name]["metrics"]["condition_row_unweighted"][
+                "rmse"
+            ],
+            "condition_row_r2": metrics["models"][name]["metrics"]["condition_row_unweighted"][
+                "r2"
+            ],
             "weighted_mae": metrics["models"][name]["metrics"]["participant_count_weighted"]["mae"],
             "weighted_rmse": metrics["models"][name]["metrics"]["participant_count_weighted"][
                 "rmse"
@@ -259,16 +287,26 @@ def _comparison_rows(metrics: dict[str, Any]) -> list[dict[str, Any]]:
 def write_comparison_tables(metrics: dict[str, Any]) -> None:
     """Write compact CSV and Markdown tables from executed metric values."""
     rows = _comparison_rows(metrics)
-    columns = ["model", "mae", "rmse", "r2", "weighted_mae", "weighted_rmse"]
+    columns = [
+        "model",
+        "problem_group_mae",
+        "condition_row_mae",
+        "condition_row_rmse",
+        "condition_row_r2",
+        "weighted_mae",
+        "weighted_rmse",
+    ]
     _write_csv(DEFAULT_COMPARISON_CSV, columns, rows)
     lines = [
-        "| Baseline | MAE | RMSE | R² | n-weighted MAE | n-weighted RMSE |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Baseline | Problem-group MAE (primary) | Condition-row MAE | Condition-row RMSE | "
+        "Condition-row R² | n-weighted MAE | n-weighted RMSE |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for row in rows:
         lines.append(
-            f"| `{row['model']}` | {row['mae']:.4f} | {row['rmse']:.4f} | "
-            f"{row['r2']:.4f} | {row['weighted_mae']:.4f} | "
+            f"| `{row['model']}` | {row['problem_group_mae']:.4f} | "
+            f"{row['condition_row_mae']:.4f} | {row['condition_row_rmse']:.4f} | "
+            f"{row['condition_row_r2']:.4f} | {row['weighted_mae']:.4f} | "
             f"{row['weighted_rmse']:.4f} |"
         )
     DEFAULT_COMPARISON_MD.parent.mkdir(parents=True, exist_ok=True)
@@ -278,10 +316,12 @@ def write_comparison_tables(metrics: dict[str, Any]) -> None:
 def write_baseline_report(metrics: dict[str, Any], path: Path = DEFAULT_REPORT) -> None:
     """Document results and the specific lesson provided by each baseline."""
     values = metrics["models"]
-    constant_mae = values["constant_training_mean"]["metrics"]["unweighted"]["mae"]
+    constant_mae = values["constant_training_mean"]["metrics"]["problem_group_equal_weighted"][
+        "mae"
+    ]
 
     def improvement(name: str) -> float:
-        return constant_mae - values[name]["metrics"]["unweighted"]["mae"]
+        return constant_mae - values[name]["metrics"]["problem_group_equal_weighted"]["mae"]
 
     lines = [
         "# Prediction baselines",
@@ -296,8 +336,8 @@ def write_baseline_report(metrics: dict[str, Any], path: Path = DEFAULT_REPORT) 
         "",
         Path(DEFAULT_COMPARISON_MD).read_text(encoding="utf-8").rstrip(),
         "",
-        "Unweighted MAE is the primary metric. Participant-count-weighted metrics are sensitivity "
-        "analyses and do not replace problem-condition-level evaluation.",
+        "Equal-structural-group MAE is the primary metric. Condition-row and participant-count-"
+        "weighted metrics are explicitly secondary.",
         "",
         "## What each baseline teaches us",
         "",
@@ -354,7 +394,7 @@ def write_baseline_report(metrics: dict[str, Any], path: Path = DEFAULT_REPORT) 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def run_baseline_experiment(
+def _run_legacy_partition_baseline_experiment(
     raw_dir: Path = DEFAULT_DESTINATION,
     manifest_path: Path = DEFAULT_MANIFEST,
     config_path: Path = DEFAULT_CONFIG,
@@ -378,6 +418,9 @@ def run_baseline_experiment(
     training_target = np.asarray([selections[index].brate for index in train_indices])
     validation_target = np.asarray([selections[index].brate for index in validation_indices])
     validation_n = np.asarray([selections[index].n for index in validation_indices])
+    validation_groups = np.asarray(
+        [assignments[index]["structural_fingerprint"] for index in validation_indices]
+    )
     models = run_fixed_baselines(
         features[train_indices],
         training_target,
@@ -392,6 +435,7 @@ def run_baseline_experiment(
             "metrics": evaluate_brate_predictions(
                 validation_target,
                 model.predictions,
+                validation_groups,
                 validation_n,
             ),
             "metadata": model.metadata,
@@ -490,23 +534,187 @@ def run_baseline_experiment(
         json.dumps(metrics, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+    comparison = [
+        {
+            "model": name,
+            "problem_group_mae_primary": values["metrics"]["problem_group_equal_weighted"]["mae"],
+            "condition_row_mae_secondary": values["metrics"]["condition_row_unweighted"]["mae"],
+            "participant_count_weighted_mae_secondary": values["metrics"][
+                "participant_count_weighted"
+            ]["mae"],
+        }
+        for name, values in metrics["models"].items()
+    ]
+    _write_csv(DEFAULT_NESTED_COMPARISON, list(comparison[0]), comparison)
+    DEFAULT_NESTED_REPORT.parent.mkdir(parents=True, exist_ok=True)
+    DEFAULT_NESTED_REPORT.write_text(
+        "# Nested outer-OOF baselines\n\n"
+        "These fixed baselines use the canonical outer structural-group folds. Equal-problem "
+        "MAE is primary; row and participant-weighted values are secondary. The complete "
+        "dataset is development data, not a confirmatory holdout.\n",
+        encoding="utf-8",
+    )
     return metrics
 
 
+def run_nested_baseline_experiment(
+    raw_dir: Path = DEFAULT_DESTINATION,
+    manifest_path: Path = DEFAULT_MANIFEST,
+    config_path: Path = DEFAULT_CONFIG,
+    *,
+    allow_dirty: bool = False,
+) -> dict[str, Any]:
+    """Evaluate fixed baselines using the same complete outer OOF folds."""
+    config = load_baseline_config(config_path)
+    provenance = start_run_provenance(
+        experiment_name=config["experiment_name"],
+        config_paths=[config_path, DEFAULT_NESTED_EVALUATION_CONFIG],
+        configuration_values={
+            "raw_dir": str(raw_dir),
+            "dataset_manifest_path": str(manifest_path),
+            "allow_dirty": allow_dirty,
+        },
+        dataset_manifest_path=manifest_path,
+        raw_dir=raw_dir,
+        fold_specification_identifier=config["evaluation_design"],
+        entry_module=Path(__file__),
+        allow_dirty=allow_dirty,
+    )
+    feature_summary = build_feature_tables(raw_dir=raw_dir, manifest_path=manifest_path)
+    fold_summary = build_nested_cv_assignments(raw_dir, manifest_path)
+    feature_names = audited_feature_names(feature_summary)
+    features = _read_engineered_features(DEFAULT_ENGINEERED_FEATURES, feature_names)
+    selections = load_selections(raw_dir / "c13k_selections.csv")
+    outer = read_outer_assignments(DEFAULT_OUTER_ASSIGNMENTS, len(selections))
+    # Reading the inner artifact proves the baseline run uses the same protocol artifacts;
+    # fixed baselines do not tune and therefore do not consume inner targets.
+    read_inner_assignments(DEFAULT_INNER_ASSIGNMENTS)
+    groups = np.asarray([row.structural_fingerprint for row in outer])
+    outer_fold_by_row = np.asarray([row.outer_fold for row in outer])
+    target = np.asarray([row.brate for row in selections])
+    participant_counts = np.asarray([row.n for row in selections])
+    predictions = {name: np.full(target.size, np.nan) for name in MODEL_ORDER}
+    fold_count = len(set(outer_fold_by_row.tolist()))
+    for outer_fold in range(fold_count):
+        fit_indices = np.flatnonzero(outer_fold_by_row != outer_fold)
+        test_indices = np.flatnonzero(outer_fold_by_row == outer_fold)
+        if set(groups[fit_indices]) & set(groups[test_indices]):
+            raise ValueError("Structural group leaked across baseline outer fold")
+        models = run_fixed_baselines(
+            features[fit_indices],
+            target[fit_indices],
+            features[test_indices],
+            feature_names,
+            config,
+        )
+        for model in models:
+            predictions[model.name][test_indices] = model.predictions
+    if any(np.any(np.isnan(values)) for values in predictions.values()):
+        raise ValueError("Baseline outer OOF predictions do not cover every row")
+    metrics = {
+        "experiment_name": config["experiment_name"],
+        "evaluation_design": "nested_grouped_cv_v1",
+        "dataset_role": "development",
+        "confirmatory_holdout": False,
+        "headline_source": "complete_outer_out_of_fold_predictions",
+        "source_commit": feature_summary["source_commit"],
+        "source_sha256": feature_summary["source_sha256"],
+        "outer_assignments_sha256": fold_summary["outer_assignments"]["sha256"],
+        "run_eligibility": provenance["run_eligibility"],
+        "provenance_path": str(DEFAULT_PROVENANCE.relative_to(PROJECT_ROOT)),
+        "rows": len(selections),
+        "structural_groups": int(np.unique(groups).size),
+        "models": {
+            name: {
+                "metrics": evaluate_brate_predictions(target, values, groups, participant_counts)
+            }
+            for name, values in predictions.items()
+        },
+    }
+    prediction_rows = [
+        {
+            "row_index": index,
+            "problem": selections[index].problem,
+            "structural_fingerprint": groups[index],
+            "outer_fold": int(outer_fold_by_row[index]),
+            "observed_bRate": target[index],
+            "participant_count_n": participant_counts[index],
+            **{name: values[index] for name, values in predictions.items()},
+        }
+        for index in range(target.size)
+    ]
+    _write_csv(DEFAULT_PREDICTIONS, list(prediction_rows[0]), prediction_rows)
+    DEFAULT_METRICS.parent.mkdir(parents=True, exist_ok=True)
+    DEFAULT_METRICS.write_text(
+        json.dumps(metrics, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    comparison = [
+        {
+            "model": name,
+            "problem_group_mae_primary": values["metrics"]["problem_group_equal_weighted"]["mae"],
+            "condition_row_mae_secondary": values["metrics"]["condition_row_unweighted"]["mae"],
+            "participant_count_weighted_mae_secondary": values["metrics"][
+                "participant_count_weighted"
+            ]["mae"],
+        }
+        for name, values in metrics["models"].items()
+    ]
+    _write_csv(DEFAULT_NESTED_COMPARISON, list(comparison[0]), comparison)
+    DEFAULT_NESTED_REPORT.parent.mkdir(parents=True, exist_ok=True)
+    DEFAULT_NESTED_REPORT.write_text(
+        "# Nested outer-OOF baselines\n\n"
+        "These fixed baselines use the canonical outer structural-group folds. Equal-problem "
+        "MAE is primary; row and participant-weighted values are secondary. The complete "
+        "dataset is development data, not a confirmatory holdout.\n",
+        encoding="utf-8",
+    )
+    finalize_run_provenance(
+        provenance,
+        fold_artifacts={
+            "outer_assignments": DEFAULT_OUTER_ASSIGNMENTS,
+            "inner_assignments": DEFAULT_INNER_ASSIGNMENTS,
+            "fold_summary": DEFAULT_FOLD_SUMMARY,
+        },
+        output_artifacts=[
+            DEFAULT_METRICS,
+            DEFAULT_PREDICTIONS,
+            DEFAULT_NESTED_COMPARISON,
+            DEFAULT_NESTED_REPORT,
+            DEFAULT_RAW_FEATURES,
+            DEFAULT_ENGINEERED_FEATURES,
+            DEFAULT_FEATURE_SUMMARY,
+            DEFAULT_FEATURE_DOCUMENTATION,
+        ],
+        output_path=DEFAULT_PROVENANCE,
+    )
+    return metrics
+
+
+# Canonical public runner. The earlier partition-based implementation remains above only so old
+# artifact provenance is readable; it is deliberately unreachable through the CLI/API.
+run_baseline_experiment = run_nested_baseline_experiment
+
+
 def main() -> None:
-    """Run all fixed baseline models and save their validation results."""
+    """Run all fixed baselines and save complete outer OOF results."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--raw-dir", type=Path, default=DEFAULT_DESTINATION)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
-    args = parser.parse_args()
-    metrics = run_baseline_experiment(args.raw_dir, args.manifest, args.config)
-    print(
-        f"Baselines complete on {metrics['evaluation_split']}: rows={metrics['validation_rows']:,}"
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow a clearly marked non-official run from a dirty worktree.",
     )
+    args = parser.parse_args()
+    metrics = run_baseline_experiment(
+        args.raw_dir, args.manifest, args.config, allow_dirty=args.allow_dirty
+    )
+    print(f"Baselines complete with outer OOF predictions: rows={metrics['rows']:,}")
     for name in MODEL_ORDER:
-        values = metrics["models"][name]["metrics"]["unweighted"]
-        print(f"{name}: MAE={values['mae']:.6f} RMSE={values['rmse']:.6f} R2={values['r2']:.6f}")
+        values = metrics["models"][name]["metrics"]["problem_group_equal_weighted"]
+        print(f"{name}: problem-group MAE={values['mae']:.6f}")
 
 
 if __name__ == "__main__":

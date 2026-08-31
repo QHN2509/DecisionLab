@@ -46,6 +46,7 @@ def test_permutation_importance_identifies_predictive_column() -> None:
         lambda values: np.clip(0.5 + 0.2 * values[:, 0], 0.0, 1.0),
         features,
         target,
+        np.asarray([f"group-{index}" for index in range(target.size)]),
         {"signal": [0], "noise": [1]},
         repeats=5,
         random_seed=7,
@@ -71,7 +72,7 @@ def test_quantile_relationship_rows_cover_all_observations() -> None:
     )
 
     assert sum(row["rows"] for row in rows) == 100
-    assert all(row["mae"] == pytest.approx(0.01) for row in rows)
+    assert all(row["condition_row_mae"] == pytest.approx(0.01) for row in rows)
 
 
 def test_error_slices_use_declared_thresholds_and_cover_each_dimension() -> None:
@@ -91,12 +92,14 @@ def test_error_slices_use_declared_thresholds_and_cover_each_dimension() -> None
     target = np.asarray([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
     predicted = target + 0.05
     counts = np.asarray([15, 15, 16, 16, 17, 18])
+    groups = np.asarray(["a", "a", "b", "c", "d", "e"])
 
     rows = error_slice_rows(
         features,
         names,
         target,
         predicted,
+        groups,
         counts,
         ev_threshold=1.0,
         participant_threshold=16,
@@ -104,7 +107,8 @@ def test_error_slices_use_declared_thresholds_and_cover_each_dimension() -> None
 
     for dimension in ("feedback", "ambiguity", "expected_value_regime", "participant_count"):
         assert sum(row["rows"] for row in rows if row["dimension"] == dimension) == 6
-    assert all(row["mae"] == pytest.approx(0.05) for row in rows)
+    assert all(row["problem_group_mae"] == pytest.approx(0.05) for row in rows)
+    assert all(row["condition_row_mae"] == pytest.approx(0.05) for row in rows)
 
 
 def test_condition_sensitivity_updates_binary_interaction() -> None:

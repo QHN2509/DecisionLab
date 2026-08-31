@@ -1,5 +1,8 @@
 # Behavioral analysis of selected-model predictions
 
+> **Stale development-era artifact.** This analysis is not based on complete nested outer OOF
+> predictions and must not be presented as generalization evidence.
+
 This report interprets the selected Random Forest on the grouped validation split. It describes predictive associations and model sensitivity, not causal effects or participant-level psychological mechanisms. The locked test split was not used.
 
 ## Main findings

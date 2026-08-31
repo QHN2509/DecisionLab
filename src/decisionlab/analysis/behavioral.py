@@ -20,23 +20,35 @@ import matplotlib.pyplot as plt  # noqa: E402
 from decisionlab import __version__
 from decisionlab.data.fetch import DEFAULT_DESTINATION, DEFAULT_MANIFEST, sha256_file
 from decisionlab.data.validation import load_and_validate, load_problems, load_selections
-from decisionlab.evaluation.protocol import DEFAULT_ASSIGNMENTS
+from decisionlab.evaluation.metrics import problem_group_regression_metrics, regression_metrics
+from decisionlab.evaluation.nested import (
+    DEFAULT_INNER_ASSIGNMENTS,
+    DEFAULT_OUTER_ASSIGNMENTS,
+)
+from decisionlab.evaluation.nested import DEFAULT_SUMMARY as DEFAULT_FOLD_SUMMARY
+from decisionlab.evaluation.oof import read_complete_outer_oof_predictions
 from decisionlab.experiments.baselines import (
-    _read_assignments,
     _read_engineered_features,
     _write_csv,
-    partition_indices,
+)
+from decisionlab.experiments.provenance import (
+    finalize_run_provenance,
+    start_run_provenance,
+    validate_upstream_artifacts,
 )
 from decisionlab.features.behavioral import DEFAULT_ENGINEERED_FEATURES
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = PROJECT_ROOT / "configs" / "behavioral_analysis.json"
-MODEL_SELECTION_DIR = PROJECT_ROOT / "artifacts" / "experiments" / "model_selection"
+MODEL_SELECTION_DIR = PROJECT_ROOT / "artifacts" / "experiments" / "nested_model_selection"
 DEFAULT_MODEL_METRICS = MODEL_SELECTION_DIR / "metrics.json"
-DEFAULT_PIPELINE = MODEL_SELECTION_DIR / "selected_pipeline.joblib"
+DEFAULT_PIPELINE_DIR = MODEL_SELECTION_DIR / "outer_fold_pipelines"
+DEFAULT_MODEL_PREDICTIONS = MODEL_SELECTION_DIR / "outer_oof_predictions.csv"
 DEFAULT_FEATURE_NAMES = MODEL_SELECTION_DIR / "feature_names.json"
+DEFAULT_MODEL_PROVENANCE = MODEL_SELECTION_DIR / "provenance.json"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "artifacts" / "analysis" / "behavioral"
 DEFAULT_STATISTICS = DEFAULT_OUTPUT_DIR / "statistics.json"
+DEFAULT_PROVENANCE = DEFAULT_OUTPUT_DIR / "provenance.json"
 DEFAULT_FEATURE_IMPORTANCE = DEFAULT_OUTPUT_DIR / "permutation_importance_features.csv"
 DEFAULT_DOMAIN_IMPORTANCE = DEFAULT_OUTPUT_DIR / "permutation_importance_domains.csv"
 DEFAULT_RELATIONSHIPS = DEFAULT_OUTPUT_DIR / "prediction_relationships.csv"
@@ -118,7 +130,7 @@ def load_behavioral_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         config = json.load(source)
     required = {
         "analysis_name",
-        "evaluation_split",
+        "prediction_source",
         "selected_model_experiment",
         "random_seed",
         "permutation_repeats",
@@ -130,14 +142,14 @@ def load_behavioral_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
     }
     if set(config) != required:
         raise ValueError(f"Behavioral config must define exactly: {sorted(required)}")
-    if config["evaluation_split"] != "validation":
-        raise ValueError("Behavioral analysis may inspect only the validation split")
+    if config["prediction_source"] != "nested_outer_oof":
+        raise ValueError("Behavioral generalization analysis requires nested outer OOF predictions")
     if config["permutation_repeats"] < 2 or config["relationship_quantile_bins"] < 3:
         raise ValueError("Behavioral analysis requires repeated permutations and at least 3 bins")
     if config["expected_value_near_tie_threshold"] <= 0.0:
         raise ValueError("Expected-value near-tie threshold must be positive")
-    if config["participant_count_split"] != "training_median":
-        raise ValueError("Participant-count slices must use the training median")
+    if config["participant_count_split"] != "development_median":
+        raise ValueError("Participant-count slices must use the development-data median")
     normative = config["normative_benchmark"]
     normative_required = {
         "strong_expected_value_difference",
@@ -180,23 +192,32 @@ def behavioral_domains(feature_names: list[str]) -> dict[str, list[int]]:
     }
 
 
-def _mae(observed: np.ndarray, predicted: np.ndarray) -> float:
-    return float(np.mean(np.abs(predicted - observed)))
+def _problem_group_mae(
+    observed: np.ndarray, predicted: np.ndarray, structural_groups: np.ndarray
+) -> float:
+    return problem_group_regression_metrics(
+        observed, predicted, structural_groups, include_r2=False
+    )["mae"]
 
 
 def permutation_importance_rows(
     predict: Callable[[np.ndarray], np.ndarray],
     features: np.ndarray,
     target: np.ndarray,
+    structural_groups: np.ndarray,
     named_columns: dict[str, list[int]],
     *,
     repeats: int,
     random_seed: int,
 ) -> list[dict[str, Any]]:
     """Measure held-out MAE increase after joint permutation of named columns."""
-    if features.shape[0] != target.size or target.size == 0:
+    if (
+        features.shape[0] != target.size
+        or structural_groups.size != target.size
+        or target.size == 0
+    ):
         raise ValueError("Permutation inputs must have aligned nonempty rows")
-    baseline_mae = _mae(target, predict(features))
+    baseline_mae = _problem_group_mae(target, predict(features), structural_groups)
     rows: list[dict[str, Any]] = []
     for item_index, (name, columns) in enumerate(named_columns.items()):
         increases = []
@@ -205,7 +226,9 @@ def permutation_importance_rows(
             permutation = rng.permutation(features.shape[0])
             permuted = features.copy()
             permuted[:, columns] = features[permutation][:, columns]
-            increases.append(_mae(target, predict(permuted)) - baseline_mae)
+            increases.append(
+                _problem_group_mae(target, predict(permuted), structural_groups) - baseline_mae
+            )
         rows.append(
             {
                 "name": name,
@@ -251,19 +274,33 @@ def quantile_relationship_rows(
                 "feature_mean": float(np.mean(values[mask])),
                 "observed_brate_mean": float(np.mean(target[mask])),
                 "predicted_brate_mean": float(np.mean(predicted[mask])),
-                "mae": _mae(target[mask], predicted[mask]),
+                "condition_row_mae": regression_metrics(
+                    target[mask], predicted[mask], include_r2=False
+                )["mae"],
             }
         )
     return rows
 
 
-def _slice_metrics(target: np.ndarray, predicted: np.ndarray, mask: np.ndarray) -> dict[str, Any]:
-    residual = predicted[mask] - target[mask]
+def _slice_metrics(
+    target: np.ndarray,
+    predicted: np.ndarray,
+    structural_groups: np.ndarray,
+    mask: np.ndarray,
+) -> dict[str, Any]:
+    primary = problem_group_regression_metrics(
+        target[mask], predicted[mask], structural_groups[mask], include_r2=False
+    )
+    condition_row = regression_metrics(target[mask], predicted[mask], include_r2=False)
     return {
         "rows": int(np.sum(mask)),
-        "mae": float(np.mean(np.abs(residual))),
-        "rmse": float(np.sqrt(np.mean(np.square(residual)))),
-        "mean_bias": float(np.mean(residual)),
+        "structural_groups": int(np.unique(structural_groups[mask]).size),
+        "problem_group_mae": primary["mae"],
+        "problem_group_rmse": primary["rmse"],
+        "problem_group_mean_bias": primary["mean_bias"],
+        "condition_row_mae": condition_row["mae"],
+        "condition_row_rmse": condition_row["rmse"],
+        "condition_row_mean_bias": condition_row["mean_bias"],
     }
 
 
@@ -272,6 +309,7 @@ def error_slice_rows(
     feature_names: list[str],
     target: np.ndarray,
     predicted: np.ndarray,
+    structural_groups: np.ndarray,
     participant_counts: np.ndarray,
     *,
     ev_threshold: float,
@@ -301,7 +339,11 @@ def error_slice_rows(
             if not np.any(mask):
                 raise ValueError(f"Empty error slice: {dimension}/{level}")
             rows.append(
-                {"dimension": dimension, "level": level, **_slice_metrics(target, predicted, mask)}
+                {
+                    "dimension": dimension,
+                    "level": level,
+                    **_slice_metrics(target, predicted, structural_groups, mask),
+                }
             )
     return rows
 
@@ -590,9 +632,9 @@ def _plot_error_slices(rows: list[dict[str, Any]]) -> None:
     for axis, dimension in zip(axes.flat, dimensions, strict=True):
         selected = [row for row in rows if row["dimension"] == dimension]
         labels = [f"{row['level'].replace('_', ' ')}\n(n={row['rows']})" for row in selected]
-        axis.bar(labels, [row["mae"] for row in selected], color="#ED7D31")
-        axis.set_ylim(0.0, max(row["mae"] for row in rows) * 1.2)
-        axis.set_ylabel("Validation MAE")
+        axis.bar(labels, [row["problem_group_mae"] for row in selected], color="#ED7D31")
+        axis.set_ylim(0.0, max(row["problem_group_mae"] for row in rows) * 1.2)
+        axis.set_ylabel("Equal-problem outer OOF MAE")
         axis.set_title(dimension.replace("_", " "))
         axis.tick_params(axis="x", labelsize=8)
     figure.suptitle("Selected-model error by prespecified behavioral slices")
@@ -727,9 +769,11 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
     loss_probability_low, loss_probability_high = endpoints(
         "loss_probability_difference_b_minus_a_oracle"
     )
-    near_equal_error = _lookup(slices, "expected_value_regime", "near_equal_ev")["mae"]
-    lower_ev_error = _lookup(slices, "expected_value_regime", "b_lower_ev")["mae"]
-    higher_ev_error = _lookup(slices, "expected_value_regime", "b_higher_ev")["mae"]
+    near_equal_error = _lookup(slices, "expected_value_regime", "near_equal_ev")[
+        "problem_group_mae"
+    ]
+    lower_ev_error = _lookup(slices, "expected_value_regime", "b_lower_ev")["problem_group_mae"]
+    higher_ev_error = _lookup(slices, "expected_value_regime", "b_higher_ev")["problem_group_mae"]
     normative = statistics["normative_benchmark"]
     normative_counts = normative["counts"]
     normative_settings = statistics["config"]["normative_benchmark"]
@@ -738,9 +782,9 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
         "# Behavioral analysis of selected-model predictions",
         "",
         (
-            "This report interprets the selected Random Forest on the grouped validation split. "
+            "This report interprets complete nested outer out-of-fold predictions. "
             "It describes predictive associations and model sensitivity, not causal effects or "
-            "participant-level psychological mechanisms. The locked test split was not used."
+            "participant-level psychological mechanisms. No confirmatory holdout is claimed."
         ),
         "",
         "## Main findings",
@@ -800,11 +844,11 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
         "",
         (
             f"- EV strongly favored A while aggregate humans favored B in "
-            f"{normative_counts['strong_ev_a_humans_favor_b']} validation rows."
+            f"{normative_counts['strong_ev_a_humans_favor_b']} outer OOF rows."
         ),
         (
             f"- EV strongly favored B while aggregate humans favored A in "
-            f"{normative_counts['strong_ev_b_humans_favor_a']} validation rows."
+            f"{normative_counts['strong_ev_b_humans_favor_a']} outer OOF rows."
         ),
         (
             f"- {normative_counts['highly_divided']} rows were highly divided, defined as "
@@ -843,15 +887,15 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
             "",
             "## Error analysis",
             "",
-            "| Slice | Rows | MAE | RMSE | Mean bias |",
+            "| Slice | Rows | Groups | Problem-group MAE | Condition-row MAE |",
             "|---|---:|---:|---:|---:|",
         ]
     )
     for row in slices:
         lines.append(
             f"| {row['dimension'].replace('_', ' ')}: {row['level'].replace('_', ' ')} | "
-            f"{row['rows']:,} | {row['mae']:.4f} | {row['rmse']:.4f} | "
-            f"{row['mean_bias']:+.4f} |"
+            f"{row['rows']:,} | {row['structural_groups']:,} | "
+            f"{row['problem_group_mae']:.4f} | {row['condition_row_mae']:.4f} |"
         )
     lines.extend(
         [
@@ -902,8 +946,8 @@ def write_behavioral_report(statistics: dict[str, Any]) -> None:
             "",
             (
                 "All plotted values are stored under `artifacts/analysis/behavioral/`. The "
-                "analysis verifies the selected-model artifact hash, exact feature order, "
-                "grouped validation assignments, and zero test predictions before producing "
+                "analysis verifies every outer-fold pipeline hash, exact feature order, "
+                "complete OOF coverage, and structural-group isolation before producing "
                 "outputs."
             ),
         ]
@@ -916,8 +960,31 @@ def run_behavioral_analysis(
     raw_dir: Path = DEFAULT_DESTINATION,
     manifest_path: Path = DEFAULT_MANIFEST,
     config_path: Path = DEFAULT_CONFIG,
+    *,
+    allow_dirty: bool = False,
 ) -> dict[str, Any]:
-    """Run validation-only interpretation and persist every reported result."""
+    """Run foldwise interpretation over complete nested outer OOF predictions."""
+    provenance = start_run_provenance(
+        experiment_name="behavioral_analysis_nested_outer_oof",
+        config_paths=[config_path],
+        configuration_values={
+            "model_experiment": str(MODEL_SELECTION_DIR),
+            "allow_dirty": allow_dirty,
+        },
+        dataset_manifest_path=manifest_path,
+        raw_dir=raw_dir,
+        fold_specification_identifier="nested_grouped_cv_v1",
+        entry_module=Path(__file__),
+        allow_dirty=allow_dirty,
+    )
+    upstream_artifacts = [
+        DEFAULT_MODEL_METRICS,
+        DEFAULT_MODEL_PREDICTIONS,
+        DEFAULT_FEATURE_NAMES,
+        DEFAULT_ENGINEERED_FEATURES,
+        *sorted(DEFAULT_PIPELINE_DIR.glob("fold_*.joblib")),
+    ]
+    validate_upstream_artifacts(DEFAULT_MODEL_PROVENANCE, upstream_artifacts)
     config = load_behavioral_config(config_path)
     validation_summary = load_and_validate(raw_dir, manifest_path)
     model_metrics = json.loads(DEFAULT_MODEL_METRICS.read_text(encoding="utf-8"))
@@ -925,44 +992,58 @@ def run_behavioral_analysis(
     feature_names = feature_document["feature_names"]
     if model_metrics["experiment_name"] != config["selected_model_experiment"]:
         raise ValueError("Behavioral config does not match the selected-model experiment")
-    if model_metrics["test_rows_predicted"] != 0 or model_metrics["test_metrics_computed"]:
-        raise ValueError("Selected-model artifact does not preserve the locked test contract")
-    expected_pipeline_hash = model_metrics["outputs"][
-        "artifacts/experiments/model_selection/selected_pipeline.joblib"
-    ]
-    if sha256_file(DEFAULT_PIPELINE) != expected_pipeline_hash:
-        raise ValueError("Selected pipeline hash differs from model-selection metadata")
-    if feature_names != model_metrics["feature_names"]:
-        raise ValueError("Saved feature order differs from model-selection metadata")
-    if sha256_file(DEFAULT_ASSIGNMENTS) != model_metrics["split_assignments_sha256"]:
-        raise ValueError("Split assignment hash differs from model-selection metadata")
+    if model_metrics["evaluation_design"] != "nested_grouped_cv_v1":
+        raise ValueError("Behavioral analysis requires nested grouped CV")
+    if model_metrics["headline_source"] != "complete_outer_out_of_fold_predictions":
+        raise ValueError("Behavioral analysis requires complete outer OOF predictions")
     domains = behavioral_domains(feature_names)
-    pipeline = joblib.load(DEFAULT_PIPELINE)
     features = _read_engineered_features(DEFAULT_ENGINEERED_FEATURES, feature_names)
     selections = load_selections(raw_dir / "c13k_selections.csv")
     problems = load_problems(raw_dir / "c13k_problems.json", selections)
-    assignments = _read_assignments(DEFAULT_ASSIGNMENTS, len(selections))
-    train_indices, validation_indices = partition_indices(assignments)
-    if any(assignments[index]["split"] != "validation" for index in validation_indices):
-        raise ValueError("Non-validation row entered behavioral analysis")
-    validation_features = features[validation_indices]
-    validation_target = np.asarray([selections[index].brate for index in validation_indices])
-    validation_n = np.asarray([selections[index].n for index in validation_indices])
-    predictions = pipeline.predict(validation_features)
+    oof = read_complete_outer_oof_predictions(
+        DEFAULT_MODEL_PREDICTIONS, expected_rows=len(selections)
+    )
+    validation_indices = oof["row_index"]
+    validation_features = features
+    validation_target = oof["target"]
+    validation_n = oof["participant_counts"]
+    validation_groups = oof["groups"]
+    outer_fold = oof["outer_fold"]
+    pipelines = {}
+    for fold, expected_hash in model_metrics["outer_pipeline_sha256"].items():
+        path = DEFAULT_PIPELINE_DIR / f"fold_{fold}.joblib"
+        if sha256_file(path) != expected_hash:
+            raise ValueError(f"Outer fold {fold} pipeline hash differs from metadata")
+        pipelines[int(fold)] = joblib.load(path)
+
+    def foldwise_predict(values: np.ndarray) -> np.ndarray:
+        result = np.full(values.shape[0], np.nan)
+        for fold, pipeline in pipelines.items():
+            mask = outer_fold == fold
+            result[mask] = pipeline.predict(values[mask])
+        if np.any(np.isnan(result)):
+            raise ValueError("Foldwise prediction did not cover every outer OOF row")
+        return result
+
+    predictions = oof["predictions"]
+    if not np.allclose(predictions, foldwise_predict(validation_features), atol=1e-12):
+        raise ValueError("Saved OOF predictions differ from the outer-fold pipelines")
 
     feature_columns = {name: [index] for index, name in enumerate(feature_names)}
     feature_importance = permutation_importance_rows(
-        pipeline.predict,
+        foldwise_predict,
         validation_features,
         validation_target,
+        validation_groups,
         feature_columns,
         repeats=config["permutation_repeats"],
         random_seed=config["random_seed"],
     )
     domain_importance = permutation_importance_rows(
-        pipeline.predict,
+        foldwise_predict,
         validation_features,
         validation_target,
+        validation_groups,
         domains,
         repeats=config["permutation_repeats"],
         random_seed=config["random_seed"] + 10_000,
@@ -980,18 +1061,18 @@ def run_behavioral_analysis(
                 bins=config["relationship_quantile_bins"],
             )
         )
-    training_n = np.asarray([selections[index].n for index in train_indices])
-    participant_threshold = float(np.median(training_n))
+    participant_threshold = float(np.median(validation_n))
     slices = error_slice_rows(
         validation_features,
         feature_names,
         validation_target,
         predictions,
+        validation_groups,
         validation_n,
         ev_threshold=config["expected_value_near_tie_threshold"],
         participant_threshold=participant_threshold,
     )
-    sensitivity = condition_sensitivity_rows(pipeline.predict, validation_features, feature_names)
+    sensitivity = condition_sensitivity_rows(foldwise_predict, validation_features, feature_names)
     normative_cases = normative_case_rows(
         validation_features,
         feature_names,
@@ -1018,25 +1099,22 @@ def run_behavioral_analysis(
         "data_validation_status": "PASS",
         "source_commit": validation_summary["source_commit"],
         "source_sha256": validation_summary["sha256"],
-        "selected_model": model_metrics["selected_model"],
-        "selected_pipeline_sha256": expected_pipeline_hash,
+        "selected_model": "inner_selected_procedure",
+        "outer_pipeline_sha256": model_metrics["outer_pipeline_sha256"],
         "model_metrics_sha256": sha256_file(DEFAULT_MODEL_METRICS),
         "feature_names_sha256": sha256_file(DEFAULT_FEATURE_NAMES),
-        "split_assignments_sha256": model_metrics["split_assignments_sha256"],
+        "fold_assignments_sha256": model_metrics["fold_assignment_sha256"],
         "feature_count": len(feature_names),
         "oracle_feature_count": model_metrics["oracle_feature_count"],
-        "analysis_split": "validation",
+        "analysis_split": "complete_nested_outer_oof",
         "validation_rows": int(validation_indices.size),
-        "validation_structural_groups": len(
-            {assignments[index]["structural_fingerprint"] for index in validation_indices}
-        ),
-        "test_rows_predicted": 0,
-        "test_metrics_computed": False,
+        "validation_structural_groups": len(set(validation_groups)),
+        "confirmatory_holdout": False,
         "participant_count_threshold": participant_threshold,
-        "participant_count_threshold_source": "training_median",
+        "participant_count_threshold_source": "development_data_median",
         "expected_value_near_tie_threshold": config["expected_value_near_tie_threshold"],
         "permutation_importance": {
-            "metric": "unweighted_validation_mae_increase",
+            "metric": "equal_structural_problem_group_outer_oof_mae_increase",
             "features": feature_importance,
             "domains": domain_importance,
         },
@@ -1046,7 +1124,7 @@ def run_behavioral_analysis(
         "normative_benchmark": {
             "counts": normative_counts,
             "examples": normative_examples,
-            "classification_scope": "validation rows only",
+            "classification_scope": "complete outer OOF rows",
         },
         "shap": config["shap"],
         "claim_scope": "predictive associations and model sensitivity; no causal claims",
@@ -1090,6 +1168,20 @@ def run_behavioral_analysis(
         json.dumps(statistics, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+    finalize_run_provenance(
+        provenance,
+        fold_artifacts={
+            "outer_assignments": DEFAULT_OUTER_ASSIGNMENTS,
+            "inner_assignments": DEFAULT_INNER_ASSIGNMENTS,
+            "fold_summary": DEFAULT_FOLD_SUMMARY,
+        },
+        input_artifacts=[
+            DEFAULT_MODEL_PROVENANCE,
+            *upstream_artifacts,
+        ],
+        output_artifacts=[DEFAULT_STATISTICS, *output_paths],
+        output_path=DEFAULT_PROVENANCE,
+    )
     return statistics
 
 
@@ -1099,9 +1191,16 @@ def main() -> None:
     parser.add_argument("--raw-dir", type=Path, default=DEFAULT_DESTINATION)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow a clearly marked non-official run from a dirty worktree.",
+    )
     args = parser.parse_args()
-    statistics = run_behavioral_analysis(args.raw_dir, args.manifest, args.config)
-    print(f"Behavioral analysis complete: {statistics['validation_rows']:,} validation rows")
+    statistics = run_behavioral_analysis(
+        args.raw_dir, args.manifest, args.config, allow_dirty=args.allow_dirty
+    )
+    print(f"Behavioral analysis complete: {statistics['validation_rows']:,} outer OOF rows")
     for row in statistics["permutation_importance"]["domains"]:
         print(f"{row['name']}: MAE increase={row['mean_mae_increase']:.6f}")
 

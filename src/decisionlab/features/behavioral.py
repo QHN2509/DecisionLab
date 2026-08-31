@@ -7,7 +7,7 @@ import csv
 import json
 import math
 import tempfile
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, fields, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -22,6 +22,10 @@ from decisionlab.data.validation import (
     load_problems,
     load_selections,
 )
+from decisionlab.experiments.provenance import (
+    finalize_run_provenance,
+    start_run_provenance,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "data" / "processed"
@@ -29,6 +33,7 @@ DEFAULT_RAW_FEATURES = DEFAULT_OUTPUT_DIR / "choices13k_raw_features.csv"
 DEFAULT_ENGINEERED_FEATURES = DEFAULT_OUTPUT_DIR / "choices13k_engineered_features.csv"
 DEFAULT_SUMMARY = PROJECT_ROOT / "artifacts" / "manifests" / "feature_build_summary.json"
 DEFAULT_DOCUMENTATION = PROJECT_ROOT / "docs" / "features.md"
+DEFAULT_PROVENANCE = PROJECT_ROOT / "artifacts" / "manifests" / "feature_build_provenance.json"
 
 Availability = Literal[
     "participant-visible",
@@ -53,6 +58,14 @@ class RawFeatureRow:
     lot_num_b: int
     amb: bool
     corr: int
+
+
+@dataclass(frozen=True, slots=True)
+class ProblemFeatureInput:
+    """Predictor-only full gamble distributions from the problem JSON."""
+
+    gamble_a: list[list[float]]
+    gamble_b: list[list[float]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -428,7 +441,21 @@ FEATURE_DEFINITIONS = (
     ),
 )
 
-FORBIDDEN_FEATURE_SOURCES = {"bRate", "bRate_std", "brate", "brate_std", "n", "Block", "block"}
+FORBIDDEN_FEATURE_SOURCES = {
+    "bRate",
+    "bRate_std",
+    "brate",
+    "brate_std",
+    "n",
+    "Block",
+    "block",
+    "Problem",
+    "problem",
+    "row_index",
+    "structural_fingerprint",
+    "outer_fold",
+    "inner_fold",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -512,8 +539,8 @@ def build_sublottery_distribution(
 
 def build_scenario_problem(
     scenario: ScenarioFeatureInput,
-) -> tuple[SelectionRecord, dict[str, list[list[float]]]]:
-    """Validate app inputs and construct the canonical record/problem feature inputs."""
+) -> tuple[RawFeatureRow, dict[str, list[list[float]]]]:
+    """Validate app inputs and construct predictor-only production inputs."""
     numeric_values = (
         scenario.high_payoff_a,
         scenario.high_probability_a,
@@ -552,11 +579,8 @@ def build_scenario_problem(
         [scenario.sublottery_probability_b * probability, payoff]
         for probability, payoff in sublottery
     ]
-    record = SelectionRecord(
-        problem=1,
+    predictors = RawFeatureRow(
         feedback=scenario.feedback,
-        n=1,
-        block=2 if scenario.feedback else 1,
         ha=scenario.high_payoff_a,
         pha=scenario.high_probability_a,
         la=scenario.low_payoff_a,
@@ -567,19 +591,17 @@ def build_scenario_problem(
         lot_num_b=scenario.lottery_outcomes_b,
         amb=scenario.ambiguity,
         corr=scenario.correlation,
-        brate=0.0,
-        brate_std=0.0,
     )
-    return record, {"A": gamble_a, "B": gamble_b}
+    return predictors, {"A": gamble_a, "B": gamble_b}
 
 
 def engineer_scenario_features(
     scenario: ScenarioFeatureInput,
 ) -> tuple[EngineeredFeatureRow, dict[str, list[list[float]]]]:
     """Run a constructed scenario through the production behavioral feature logic."""
-    record, problem = build_scenario_problem(scenario)
-    engineered = engineer_behavioral_features(record, problem)
-    validate_feature_rows([extract_raw_features(record)], [engineered])
+    predictors, problem = build_scenario_problem(scenario)
+    engineered = engineer_behavioral_features(predictors, extract_problem_features(problem))
+    validate_feature_rows([predictors], [engineered])
     return engineered, problem
 
 
@@ -600,21 +622,35 @@ def extract_raw_features(record: SelectionRecord) -> RawFeatureRow:
     )
 
 
+def extract_problem_features(
+    problem_description: dict[str, list[list[float]]],
+) -> ProblemFeatureInput:
+    """Select only A/B distributions and reject evaluation metadata in problem inputs."""
+    if set(problem_description) != {"A", "B"}:
+        raise ValueError("Problem feature input must contain exactly Gamble A and Gamble B")
+    return ProblemFeatureInput(
+        gamble_a=problem_description["A"],
+        gamble_b=problem_description["B"],
+    )
+
+
 def engineer_behavioral_features(
-    record: SelectionRecord, problem_description: dict[str, list[list[float]]]
+    predictors: RawFeatureRow, problem: ProblemFeatureInput
 ) -> EngineeredFeatureRow:
-    """Build the declared behavioral features for one validated row."""
-    option_a = summarize_option(problem_description["A"])
-    option_b = summarize_option(problem_description["B"])
-    expected_value_a = record.pha * record.ha + (1.0 - record.pha) * record.la
-    expected_value_b = record.phb * record.hb + (1.0 - record.phb) * record.lb
+    """Build features from predictor-only inputs that cannot contain outcomes or metadata."""
+    if not isinstance(predictors, RawFeatureRow) or not isinstance(problem, ProblemFeatureInput):
+        raise TypeError("Production feature engineering requires predictor-only input types")
+    option_a = summarize_option(problem.gamble_a)
+    option_b = summarize_option(problem.gamble_b)
+    expected_value_a = predictors.pha * predictors.ha + (1.0 - predictors.pha) * predictors.la
+    expected_value_b = predictors.phb * predictors.hb + (1.0 - predictors.phb) * predictors.lb
     if not math.isclose(expected_value_a, option_a.expected_value, abs_tol=1e-9):
         raise ValueError("Gamble A expected value differs between CSV and JSON")
     if not math.isclose(expected_value_b, option_b.expected_value, abs_tol=1e-9):
         raise ValueError("Gamble B expected value differs between CSV and JSON")
     expected_value_difference = expected_value_b - expected_value_a
-    feedback_indicator = int(record.feedback)
-    ambiguity_indicator = int(record.amb)
+    feedback_indicator = int(predictors.feedback)
+    ambiguity_indicator = int(predictors.amb)
     return EngineeredFeatureRow(
         expected_value_a=expected_value_a,
         expected_value_b_oracle=expected_value_b,
@@ -639,13 +675,13 @@ def engineer_behavioral_features(
         ),
         ambiguity_indicator=ambiguity_indicator,
         feedback_indicator=feedback_indicator,
-        lottery_shape_b_undefined=int(record.lot_shape_b == 0),
-        lottery_shape_b_symmetric=int(record.lot_shape_b == 1),
-        lottery_shape_b_right_skewed=int(record.lot_shape_b == 2),
-        lottery_shape_b_left_skewed=int(record.lot_shape_b == 3),
-        correlation_negative=int(record.corr == -1),
-        correlation_zero=int(record.corr == 0),
-        correlation_positive=int(record.corr == 1),
+        lottery_shape_b_undefined=int(predictors.lot_shape_b == 0),
+        lottery_shape_b_symmetric=int(predictors.lot_shape_b == 1),
+        lottery_shape_b_right_skewed=int(predictors.lot_shape_b == 2),
+        lottery_shape_b_left_skewed=int(predictors.lot_shape_b == 3),
+        correlation_negative=int(predictors.corr == -1),
+        correlation_zero=int(predictors.corr == 0),
+        correlation_positive=int(predictors.corr == 1),
         expected_value_difference_oracle_x_feedback=(
             expected_value_difference * feedback_indicator
         ),
@@ -676,7 +712,11 @@ def audit_feature_contract() -> dict[str, Any]:
             "status": "PASS",
         }
     raw_fields = {field.name for field in fields(RawFeatureRow)}
-    forbidden_raw = raw_fields & {"problem", "n", "block", "brate", "brate_std"}
+    problem_fields = {field.name for field in fields(ProblemFeatureInput)}
+    forbidden_raw = raw_fields & FORBIDDEN_FEATURE_SOURCES
+    expected_problem_fields = {"gamble_a", "gamble_b"}
+    if problem_fields != expected_problem_fields:
+        raise ValueError("Problem predictor contract must contain only Gamble A and Gamble B")
     if forbidden_raw:
         raise ValueError(
             f"Raw feature contract contains prohibited fields: {sorted(forbidden_raw)}"
@@ -686,7 +726,58 @@ def audit_feature_contract() -> dict[str, Any]:
         "engineered_feature_count": len(FEATURE_DEFINITIONS),
         "raw_feature_count": len(raw_fields),
         "forbidden_raw_fields": sorted(forbidden_raw),
+        "production_input_contract": {
+            "record_type": "RawFeatureRow",
+            "record_fields": sorted(raw_fields),
+            "problem_type": "ProblemFeatureInput",
+            "problem_fields": sorted(problem_fields),
+            "forbidden_fields_unrepresentable": sorted(FORBIDDEN_FEATURE_SOURCES),
+            "runtime_type_enforcement": True,
+            "status": "PASS",
+        },
         "features": audit,
+    }
+
+
+def audit_forbidden_field_invariance(
+    selections: list[SelectionRecord],
+    problems: dict[str, Any],
+    expected_features: list[EngineeredFeatureRow],
+) -> dict[str, Any]:
+    """Execute exact metamorphic checks for every forbidden SelectionRecord field."""
+    if not selections or len(selections) != len(expected_features):
+        raise ValueError("Metamorphic audit inputs must be aligned and nonempty")
+    mutations = {
+        "problem": lambda row: row.problem + 1_000_000,
+        "n": lambda row: 16 if row.n == 15 else 15,
+        "block": lambda row: row.block + 10,
+        "bRate": lambda row: 1.0 if row.brate == 0.0 else 0.0,
+        "bRate_std": lambda row: 1.0 if row.brate_std == 0.0 else 0.0,
+    }
+    comparisons = 0
+    for row_index, (record, expected) in enumerate(zip(selections, expected_features, strict=True)):
+        problem = extract_problem_features(problems[str(row_index)])
+        baseline_predictors = extract_raw_features(record)
+        for display_name, value_factory in mutations.items():
+            record_field = {
+                "bRate": "brate",
+                "bRate_std": "brate_std",
+            }.get(display_name, display_name)
+            changed = replace(record, **{record_field: value_factory(record)})
+            changed_predictors = extract_raw_features(changed)
+            changed_features = engineer_behavioral_features(changed_predictors, problem)
+            if changed_predictors != baseline_predictors or changed_features != expected:
+                raise ValueError(
+                    f"Forbidden field {display_name} changed predictors at row {row_index}"
+                )
+            comparisons += 1
+    return {
+        "status": "PASS",
+        "method": "exact_metamorphic_forbidden_field_mutation",
+        "rows_checked": len(selections),
+        "fields_checked": list(mutations),
+        "comparisons": comparisons,
+        "engineered_predictor_changes": 0,
     }
 
 
@@ -787,6 +878,12 @@ def write_feature_documentation(path: Path = DEFAULT_DOCUMENTATION) -> None:
             "join/grouping keys and must not be model inputs. No feature uses `bRate`, "
             "`bRate_std`, `n`, or `Block`."
         ),
+        (
+            "The production feature function accepts only `RawFeatureRow` and "
+            "`ProblemFeatureInput`. These types cannot represent targets, participant counts, "
+            "blocks, identifiers, structural fingerprints, or fold metadata. Passing a full "
+            "selection record is rejected at runtime."
+        ),
         "",
         "## Feature contracts",
         "",
@@ -865,8 +962,13 @@ def build_feature_tables(
     raw_features: list[RawFeatureRow] = []
     engineered_features: list[EngineeredFeatureRow] = []
     for row_index, record in enumerate(selections):
-        raw_features.append(extract_raw_features(record))
-        engineered_features.append(engineer_behavioral_features(record, problems[str(row_index)]))
+        predictors = extract_raw_features(record)
+        problem = extract_problem_features(problems[str(row_index)])
+        raw_features.append(predictors)
+        engineered_features.append(engineer_behavioral_features(predictors, problem))
+    leakage_audit["metamorphic_invariance"] = audit_forbidden_field_invariance(
+        selections, problems, engineered_features
+    )
     output_validation = validate_feature_rows(raw_features, engineered_features)
     raw_rows = [
         {"row_index": index, "problem": record.problem} | asdict(feature_row)
@@ -899,7 +1001,17 @@ def build_feature_tables(
         "raw_feature_columns": [field.name for field in fields(RawFeatureRow)],
         "engineered_feature_columns": [field.name for field in fields(EngineeredFeatureRow)],
         "identifier_columns_not_features": ["row_index", "problem"],
-        "excluded_columns": ["bRate", "bRate_std", "n", "Block"],
+        "excluded_columns": [
+            "bRate",
+            "bRate_std",
+            "n",
+            "Block",
+            "problem",
+            "row_index",
+            "structural_fingerprint",
+            "outer_fold",
+            "inner_fold",
+        ],
         "leakage_audit": leakage_audit,
         "output_validation": output_validation,
         "outputs": {
@@ -915,6 +1027,56 @@ def build_feature_tables(
     return summary
 
 
+def run_feature_build(
+    raw_dir: Path = DEFAULT_DESTINATION,
+    manifest_path: Path = DEFAULT_MANIFEST,
+    raw_output: Path = DEFAULT_RAW_FEATURES,
+    engineered_output: Path = DEFAULT_ENGINEERED_FEATURES,
+    summary_output: Path = DEFAULT_SUMMARY,
+    documentation_output: Path = DEFAULT_DOCUMENTATION,
+    provenance_output: Path = DEFAULT_PROVENANCE,
+    *,
+    allow_dirty: bool = False,
+) -> dict[str, Any]:
+    """Run the standalone feature build with centralized provenance."""
+    provenance = start_run_provenance(
+        experiment_name="behavioral_feature_build",
+        config_paths=[],
+        configuration_values={
+            "raw_output": str(raw_output),
+            "engineered_output": str(engineered_output),
+            "summary_output": str(summary_output),
+            "documentation_output": str(documentation_output),
+            "allow_dirty": allow_dirty,
+        },
+        dataset_manifest_path=manifest_path,
+        raw_dir=raw_dir,
+        fold_specification_identifier="not_applicable_feature_build",
+        entry_module=Path(__file__),
+        allow_dirty=allow_dirty,
+    )
+    summary = build_feature_tables(
+        raw_dir,
+        manifest_path,
+        raw_output,
+        engineered_output,
+        summary_output,
+        documentation_output,
+    )
+    finalize_run_provenance(
+        provenance,
+        fold_artifacts={},
+        output_artifacts=[
+            raw_output,
+            engineered_output,
+            summary_output,
+            documentation_output,
+        ],
+        output_path=provenance_output,
+    )
+    return summary
+
+
 def main() -> None:
     """Run the reproducible behavioral feature-build stage."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -924,14 +1086,22 @@ def main() -> None:
     parser.add_argument("--engineered-output", type=Path, default=DEFAULT_ENGINEERED_FEATURES)
     parser.add_argument("--summary", type=Path, default=DEFAULT_SUMMARY)
     parser.add_argument("--documentation", type=Path, default=DEFAULT_DOCUMENTATION)
+    parser.add_argument("--provenance", type=Path, default=DEFAULT_PROVENANCE)
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow a clearly marked non-official run from a dirty worktree.",
+    )
     args = parser.parse_args()
-    summary = build_feature_tables(
+    summary = run_feature_build(
         args.raw_dir,
         args.manifest,
         args.raw_output,
         args.engineered_output,
         args.summary,
         args.documentation,
+        args.provenance,
+        allow_dirty=args.allow_dirty,
     )
     print(
         f"Feature build: PASS; rows={summary['rows']:,}; "

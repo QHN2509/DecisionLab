@@ -1,16 +1,18 @@
 {
-  "experiment_name": "grouped_model_selection_v1",
-  "evaluation_split": "validation",
+  "experiment_name": "nested_grouped_model_selection_v3",
+  "evaluation_design": "nested_grouped_cv_v1",
   "feature_set": "engineered_design_oracle_v1",
   "random_seed": 20260827,
-  "cross_validation": {
-    "folds": 5,
-    "shuffle_groups": true,
-    "primary_metric": "mae"
+  "nested_cross_validation": {
+    "outer_folds": 5,
+    "inner_folds": 5,
+    "outer_seed": 20260830,
+    "inner_seed": 20260831,
+    "primary_metric": "problem_group_equal_weighted_mae"
   },
   "selection": {
-    "validation_mae_tolerance": 0.005,
-    "rule": "lowest_complexity_within_validation_mae_tolerance_then_cv_mae_then_cv_std"
+    "inner_oof_mae_tolerance": 0.005,
+    "rule": "lowest_complexity_within_inner_oof_mae_tolerance_then_inner_oof_mae_then_fold_std"
   },
   "random_forest": {
     "fixed": {

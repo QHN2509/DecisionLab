@@ -1,12 +1,12 @@
 {
   "analysis_name": "selected_model_behavioral_analysis_v1",
-  "evaluation_split": "validation",
-  "selected_model_experiment": "grouped_model_selection_v1",
+  "prediction_source": "nested_outer_oof",
+  "selected_model_experiment": "nested_grouped_model_selection_v3",
   "random_seed": 20260827,
   "permutation_repeats": 10,
   "relationship_quantile_bins": 10,
   "expected_value_near_tie_threshold": 1.0,
-  "participant_count_split": "training_median",
+  "participant_count_split": "development_median",
   "normative_benchmark": {
     "strong_expected_value_difference": 5.0,
     "human_favor_b_threshold": 0.60,

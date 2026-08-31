@@ -1,5 +1,8 @@
 # Systematic model error analysis
 
+> **Stale development-era artifact.** This analysis is not based on complete nested outer OOF
+> predictions and must not be presented as generalization evidence.
+
 This report analyzes the selected Random Forest on the grouped validation split. The locked test split was not inspected. Differences are descriptive predictive patterns, not causal effects or explanations of participant behavior.
 
 ## Summary

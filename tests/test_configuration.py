@@ -26,11 +26,23 @@ def test_stochastic_workflows_declare_integer_random_seeds(config_path: Path) ->
     assert config["random_seed"] >= 0
 
 
-def test_group_split_declares_stable_nonempty_seed() -> None:
+def test_nested_group_cv_declares_deterministic_integer_seeds() -> None:
     config = json.loads(Path("configs/evaluation.json").read_text(encoding="utf-8"))
 
-    assert isinstance(config["split_seed"], str)
-    assert config["split_seed"].strip()
+    assert type(config["outer_seed"]) is int
+    assert type(config["inner_seed"]) is int
+    assert config["dataset_role"] == "development"
+    assert config["historical_partitions_role"] == "development_only_not_confirmatory"
+
+
+def test_model_selection_uses_the_canonical_nested_fold_contract() -> None:
+    evaluation = json.loads(Path("configs/evaluation.json").read_text(encoding="utf-8"))
+    model = json.loads(Path("configs/model_selection.json").read_text(encoding="utf-8"))
+    nested = model["nested_cross_validation"]
+
+    assert model["evaluation_design"] == evaluation["protocol_name"]
+    for key in ("outer_folds", "inner_folds", "outer_seed", "inner_seed", "primary_metric"):
+        assert nested[key] == evaluation[key]
 
 
 def test_locked_environment_contains_every_direct_dependency() -> None:
@@ -55,7 +67,7 @@ def test_readme_clean_workflow_commands_are_complete_and_ordered() -> None:
         "decisionlab-validate-data",
         "decisionlab-eda",
         "decisionlab-build-features",
-        "decisionlab-create-splits",
+        "decisionlab-create-folds",
         "decisionlab-run-baselines",
         "decisionlab-select-model",
         "decisionlab-behavioral-analysis",

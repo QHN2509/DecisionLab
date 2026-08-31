@@ -12,6 +12,8 @@ def regression_metrics(
     observed: Sequence[float],
     predicted: Sequence[float],
     weights: Sequence[float] | None = None,
+    *,
+    include_r2: bool = True,
 ) -> dict[str, float]:
     """Compute MAE, RMSE, R², and signed bias with optional positive weights."""
     y_true = np.asarray(observed, dtype=float)
@@ -38,27 +40,87 @@ def regression_metrics(
     absolute_error = np.abs(residual)
     squared_error = np.square(residual)
     target_mean = float(np.sum(metric_weights * y_true))
-    denominator = float(np.sum(metric_weights * np.square(y_true - target_mean)))
-    if denominator == 0.0:
-        raise ValueError("R² is undefined when all observed values are identical")
-    r2 = 1.0 - float(np.sum(metric_weights * squared_error)) / denominator
-    return {
+    result = {
         "mae": float(np.sum(metric_weights * absolute_error)),
         "rmse": float(np.sqrt(np.sum(metric_weights * squared_error))),
-        "r2": r2,
         "mean_bias": float(np.sum(metric_weights * residual)),
     }
+    if include_r2:
+        denominator = float(np.sum(metric_weights * np.square(y_true - target_mean)))
+        if denominator == 0.0:
+            raise ValueError("R² is undefined when all observed values are identical")
+        result["r2"] = 1.0 - float(np.sum(metric_weights * squared_error)) / denominator
+    return result
+
+
+def problem_group_regression_metrics(
+    observed: Sequence[float],
+    predicted: Sequence[float],
+    structural_groups: Sequence[str],
+    *,
+    include_r2: bool = True,
+) -> dict[str, float]:
+    """Compute metrics while giving every structural problem equal total weight."""
+    groups = np.asarray(structural_groups)
+    if groups.ndim != 1 or groups.size == 0:
+        raise ValueError("Structural groups must be a nonempty vector")
+    if groups.size != len(observed):
+        raise ValueError("Structural groups must match the target length")
+    if any(not isinstance(group, str) or not group for group in groups.tolist()):
+        raise ValueError("Structural groups must be nonempty strings")
+
+    _, inverse, counts = np.unique(groups, return_inverse=True, return_counts=True)
+    group_count = counts.size
+    row_weights = 1.0 / (group_count * counts[inverse])
+    return regression_metrics(observed, predicted, row_weights, include_r2=include_r2)
 
 
 def evaluate_brate_predictions(
-    observed: Sequence[float], predicted: Sequence[float], participant_counts: Sequence[int]
+    observed: Sequence[float],
+    predicted: Sequence[float],
+    structural_groups: Sequence[str],
+    participant_counts: Sequence[int],
 ) -> dict[str, Any]:
-    """Return primary problem-level and participant-count-weighted sensitivity metrics."""
+    """Return primary equal-problem metrics and explicitly secondary row metrics."""
     return {
-        "unweighted": regression_metrics(observed, predicted),
+        "problem_group_equal_weighted": problem_group_regression_metrics(
+            observed, predicted, structural_groups
+        ),
+        "condition_row_unweighted": regression_metrics(observed, predicted),
         "participant_count_weighted": regression_metrics(
             observed,
             predicted,
             participant_counts,
         ),
+    }
+
+
+def problem_group_mae_interval(
+    observed: Sequence[float],
+    predicted: Sequence[float],
+    structural_groups: Sequence[str],
+    *,
+    repeats: int,
+    confidence_level: float,
+    random_seed: int,
+) -> dict[str, float]:
+    """Bootstrap equal-problem MAE by resampling structural problems equally."""
+    target = np.asarray(observed, dtype=float)
+    estimates = np.asarray(predicted, dtype=float)
+    groups = np.asarray(structural_groups)
+    if not (target.size == estimates.size == groups.size) or target.size == 0:
+        raise ValueError("Grouped-bootstrap inputs must be aligned and nonempty")
+    if repeats < 1 or not 0.0 < confidence_level < 1.0:
+        raise ValueError("Grouped-bootstrap settings are invalid")
+    _, inverse, counts = np.unique(groups, return_inverse=True, return_counts=True)
+    group_loss = np.bincount(inverse, weights=np.abs(estimates - target)) / counts
+    rng = np.random.default_rng(random_seed)
+    sampled = rng.integers(0, group_loss.size, size=(repeats, group_loss.size))
+    values = np.mean(group_loss[sampled], axis=1)
+    tail = (1.0 - confidence_level) / 2.0
+    return {
+        "confidence_level": confidence_level,
+        "lower": float(np.quantile(values, tail)),
+        "upper": float(np.quantile(values, 1.0 - tail)),
+        "resampling_unit": "structural_problem_group",
     }

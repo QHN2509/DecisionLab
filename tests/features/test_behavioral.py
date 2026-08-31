@@ -9,17 +9,28 @@ from decisionlab.data.validation import SelectionRecord
 from decisionlab.features.behavioral import (
     FEATURE_DEFINITIONS,
     EngineeredFeatureRow,
+    ProblemFeatureInput,
     RawFeatureRow,
     ScenarioFeatureInput,
     audit_feature_contract,
+    audit_forbidden_field_invariance,
     build_sublottery_distribution,
     engineer_behavioral_features,
     engineer_scenario_features,
+    extract_problem_features,
     extract_raw_features,
     summarize_option,
     validate_feature_rows,
     write_feature_documentation,
 )
+
+
+def engineer(
+    selection: SelectionRecord, problem: dict[str, list[list[float]]]
+) -> EngineeredFeatureRow:
+    return engineer_behavioral_features(
+        extract_raw_features(selection), extract_problem_features(problem)
+    )
 
 
 @pytest.fixture
@@ -55,7 +66,7 @@ def problem() -> dict[str, list[list[float]]]:
 def test_expected_value_and_relative_payoff_formulas(
     selection: SelectionRecord, problem: dict[str, list[list[float]]]
 ) -> None:
-    features = engineer_behavioral_features(selection, problem)
+    features = engineer(selection, problem)
 
     assert features.expected_value_a == pytest.approx(0.0)
     assert features.expected_value_b_oracle == pytest.approx(6.0)
@@ -70,7 +81,7 @@ def test_expected_value_and_relative_payoff_formulas(
 def test_dispersion_and_probability_formulas(
     selection: SelectionRecord, problem: dict[str, list[list[float]]]
 ) -> None:
-    features = engineer_behavioral_features(selection, problem)
+    features = engineer(selection, problem)
 
     assert features.payoff_std_a == pytest.approx(48.0**0.5)
     assert features.payoff_std_b_oracle == pytest.approx(4.0)
@@ -94,7 +105,7 @@ def test_tied_best_outcomes_sum_probabilities() -> None:
 def test_indicators_and_interactions_are_behaviorally_defined(
     selection: SelectionRecord, problem: dict[str, list[list[float]]]
 ) -> None:
-    features = engineer_behavioral_features(selection, problem)
+    features = engineer(selection, problem)
 
     assert features.ambiguity_indicator == 1
     assert features.feedback_indicator == 1
@@ -135,6 +146,87 @@ def test_raw_features_are_separate_from_identifiers_metadata_and_targets(
     assert names.isdisjoint({"problem", "n", "block", "brate", "brate_std"})
 
 
+def test_production_feature_api_rejects_full_selection_records(
+    selection: SelectionRecord, problem: dict[str, list[list[float]]]
+) -> None:
+    with pytest.raises(TypeError, match="predictor-only"):
+        engineer_behavioral_features(selection, extract_problem_features(problem))  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "forbidden_change",
+    [
+        {"problem": 999},
+        {"n": 33},
+        {"block": 5},
+        {"brate": 0.01},
+        {"brate_std": 0.99},
+    ],
+    ids=["problem_identifier", "participant_count", "block", "bRate", "bRate_std"],
+)
+def test_engineered_predictors_are_invariant_to_each_forbidden_record_field(
+    selection: SelectionRecord,
+    problem: dict[str, list[list[float]]],
+    forbidden_change: dict[str, object],
+) -> None:
+    changed = replace(selection, **forbidden_change)
+
+    original_predictors = extract_raw_features(selection)
+    changed_predictors = extract_raw_features(changed)
+    original = engineer_behavioral_features(original_predictors, extract_problem_features(problem))
+    metamorphic = engineer_behavioral_features(
+        changed_predictors, extract_problem_features(problem)
+    )
+
+    assert changed_predictors == original_predictors
+    assert metamorphic == original
+
+
+def test_problem_predictor_contract_rejects_identifiers_and_evaluation_metadata(
+    problem: dict[str, list[list[float]]],
+) -> None:
+    for forbidden in ("problem", "row_index", "structural_fingerprint", "outer_fold"):
+        with pytest.raises(ValueError, match="exactly Gamble A and Gamble B"):
+            extract_problem_features(problem | {forbidden: 1})  # type: ignore[arg-type]
+
+
+def test_predictor_only_types_cannot_represent_forbidden_fields() -> None:
+    allowed = {field.name for field in fields(RawFeatureRow)} | {
+        field.name for field in fields(ProblemFeatureInput)
+    }
+
+    assert allowed.isdisjoint(
+        {
+            "problem",
+            "row_index",
+            "n",
+            "block",
+            "brate",
+            "brate_std",
+            "structural_fingerprint",
+            "outer_fold",
+            "inner_fold",
+        }
+    )
+
+
+def test_executable_leakage_audit_checks_each_forbidden_field(
+    selection: SelectionRecord, problem: dict[str, list[list[float]]]
+) -> None:
+    expected = engineer(selection, problem)
+
+    audit = audit_forbidden_field_invariance([selection], {"0": problem}, [expected])
+
+    assert audit == {
+        "status": "PASS",
+        "method": "exact_metamorphic_forbidden_field_mutation",
+        "rows_checked": 1,
+        "fields_checked": ["problem", "n", "block", "bRate", "bRate_std"],
+        "comparisons": 5,
+        "engineered_predictor_changes": 0,
+    }
+
+
 def test_every_engineered_feature_has_a_passing_leakage_audit() -> None:
     audit = audit_feature_contract()
     output_names = [field.name for field in fields(EngineeredFeatureRow)]
@@ -151,7 +243,7 @@ def test_generated_rows_pass_output_validation(
 ) -> None:
     validation = validate_feature_rows(
         [extract_raw_features(selection)],
-        [engineer_behavioral_features(selection, problem)],
+        [engineer(selection, problem)],
     )
 
     assert validation["status"] == "PASS"
@@ -180,7 +272,7 @@ def test_feature_validation_rejects_semantic_bound_violations(
     invalid_value: float,
     message: str,
 ) -> None:
-    engineered = engineer_behavioral_features(selection, problem)
+    engineered = engineer(selection, problem)
 
     with pytest.raises(ValueError, match=message):
         validate_feature_rows(
@@ -192,7 +284,7 @@ def test_feature_validation_rejects_semantic_bound_violations(
 def test_feature_difference_identities_hold(
     selection: SelectionRecord, problem: dict[str, list[list[float]]]
 ) -> None:
-    feature = engineer_behavioral_features(selection, problem)
+    feature = engineer(selection, problem)
 
     assert feature.expected_value_difference_b_minus_a_oracle == pytest.approx(
         feature.expected_value_b_oracle - feature.expected_value_a

@@ -20,24 +20,38 @@ import matplotlib.pyplot as plt  # noqa: E402
 from decisionlab import __version__
 from decisionlab.data.fetch import DEFAULT_DESTINATION, DEFAULT_MANIFEST, sha256_file
 from decisionlab.data.validation import load_and_validate, load_problems, load_selections
-from decisionlab.evaluation.metrics import regression_metrics
-from decisionlab.evaluation.protocol import DEFAULT_ASSIGNMENTS
+from decisionlab.evaluation.metrics import (
+    evaluate_brate_predictions,
+    problem_group_regression_metrics,
+    regression_metrics,
+)
+from decisionlab.evaluation.nested import (
+    DEFAULT_INNER_ASSIGNMENTS,
+    DEFAULT_OUTER_ASSIGNMENTS,
+)
+from decisionlab.evaluation.nested import DEFAULT_SUMMARY as DEFAULT_FOLD_SUMMARY
+from decisionlab.evaluation.oof import read_complete_outer_oof_predictions
 from decisionlab.experiments.baselines import (
-    _read_assignments,
     _read_engineered_features,
     _write_csv,
-    partition_indices,
+)
+from decisionlab.experiments.provenance import (
+    finalize_run_provenance,
+    start_run_provenance,
+    validate_upstream_artifacts,
 )
 from decisionlab.features.behavioral import DEFAULT_ENGINEERED_FEATURES
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CONFIG = PROJECT_ROOT / "configs" / "error_analysis.json"
-MODEL_SELECTION_DIR = PROJECT_ROOT / "artifacts" / "experiments" / "model_selection"
+MODEL_SELECTION_DIR = PROJECT_ROOT / "artifacts" / "experiments" / "nested_model_selection"
 DEFAULT_MODEL_METRICS = MODEL_SELECTION_DIR / "metrics.json"
-DEFAULT_MODEL_PREDICTIONS = MODEL_SELECTION_DIR / "predictions_validation.csv"
+DEFAULT_MODEL_PREDICTIONS = MODEL_SELECTION_DIR / "outer_oof_predictions.csv"
 DEFAULT_FEATURE_NAMES = MODEL_SELECTION_DIR / "feature_names.json"
+DEFAULT_MODEL_PROVENANCE = MODEL_SELECTION_DIR / "provenance.json"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "artifacts" / "analysis" / "errors"
 DEFAULT_STATISTICS = DEFAULT_OUTPUT_DIR / "statistics.json"
+DEFAULT_PROVENANCE = DEFAULT_OUTPUT_DIR / "provenance.json"
 DEFAULT_LARGEST_ERRORS = DEFAULT_OUTPUT_DIR / "largest_errors.csv"
 DEFAULT_REGIMES = DEFAULT_OUTPUT_DIR / "regime_metrics.csv"
 DEFAULT_PARTICIPANT_COUNTS = DEFAULT_OUTPUT_DIR / "participant_count_metrics.csv"
@@ -56,7 +70,7 @@ def load_error_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         config = json.load(source)
     required = {
         "analysis_name",
-        "evaluation_split",
+        "prediction_source",
         "selected_model_experiment",
         "random_seed",
         "cluster_bootstrap_repeats",
@@ -64,20 +78,20 @@ def load_error_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         "largest_errors_to_save",
         "representative_cases_per_category",
         "near_equal_ev_absolute_difference",
-        "extreme_ev_training_absolute_quantile",
+        "extreme_ev_development_absolute_quantile",
         "approximately_half_half_width",
         "strong_consensus_half_width",
     }
     if set(config) != required:
         raise ValueError(f"Error-analysis config must define exactly: {sorted(required)}")
-    if config["evaluation_split"] != "validation":
-        raise ValueError("Error analysis may inspect only the validation split")
+    if config["prediction_source"] != "nested_outer_oof":
+        raise ValueError("Generalization error analysis requires nested outer OOF predictions")
     if config["cluster_bootstrap_repeats"] < 100:
         raise ValueError("Grouped bootstrap requires at least 100 repeats")
     if not 0.0 < config["confidence_level"] < 1.0:
         raise ValueError("Confidence level must be in (0, 1)")
-    if not 0.5 < config["extreme_ev_training_absolute_quantile"] < 1.0:
-        raise ValueError("Extreme-EV training quantile must exceed 0.5 and be below 1")
+    if not 0.5 < config["extreme_ev_development_absolute_quantile"] < 1.0:
+        raise ValueError("Extreme-EV development quantile must exceed 0.5 and be below 1")
     if not 0.0 < config["approximately_half_half_width"] < 0.5:
         raise ValueError("50/50 half-width must be in (0, 0.5)")
     return config
@@ -117,14 +131,15 @@ def clustered_error_interval(
     counts = np.bincount(group_positions).astype(float)
     absolute_sums = np.bincount(group_positions, weights=absolute)
     squared_sums = np.bincount(group_positions, weights=squared)
+    group_absolute_means = absolute_sums / counts
+    group_squared_means = squared_sums / counts
     rng = np.random.default_rng(random_seed)
     mae_values = np.empty(repeats)
     rmse_values = np.empty(repeats)
     for repeat in range(repeats):
         sampled = rng.integers(0, unique_groups.size, size=unique_groups.size)
-        sampled_count = float(np.sum(counts[sampled]))
-        mae_values[repeat] = float(np.sum(absolute_sums[sampled]) / sampled_count)
-        rmse_values[repeat] = math.sqrt(float(np.sum(squared_sums[sampled]) / sampled_count))
+        mae_values[repeat] = float(np.mean(group_absolute_means[sampled]))
+        rmse_values[repeat] = math.sqrt(float(np.mean(group_squared_means[sampled])))
     tail = (1.0 - confidence_level) / 2.0
     return {
         "mae_ci_lower": float(np.quantile(mae_values, tail)),
@@ -202,7 +217,10 @@ def calculate_regime_metrics(
         for level, mask in levels.items():
             if not np.any(mask):
                 raise ValueError(f"Empty error regime: {dimension}/{level}")
-            residual = predicted[mask] - target[mask]
+            primary = problem_group_regression_metrics(
+                target[mask], predicted[mask], groups[mask], include_r2=False
+            )
+            condition_row = regression_metrics(target[mask], predicted[mask], include_r2=False)
             interval = clustered_error_interval(
                 target[mask],
                 predicted[mask],
@@ -217,9 +235,12 @@ def calculate_regime_metrics(
                     "level": level,
                     "rows": int(np.sum(mask)),
                     "structural_groups": int(np.unique(groups[mask]).size),
-                    "mae": float(np.mean(np.abs(residual))),
-                    "rmse": float(np.sqrt(np.mean(np.square(residual)))),
-                    "mean_bias": float(np.mean(residual)),
+                    "problem_group_mae": primary["mae"],
+                    "problem_group_rmse": primary["rmse"],
+                    "problem_group_mean_bias": primary["mean_bias"],
+                    "condition_row_mae": condition_row["mae"],
+                    "condition_row_rmse": condition_row["rmse"],
+                    "condition_row_mean_bias": condition_row["mean_bias"],
                     **interval,
                 }
             )
@@ -256,15 +277,21 @@ def participant_count_analysis(
     rows = []
     for offset, count in enumerate(sorted(np.unique(participant_counts))):
         mask = participant_counts == count
-        residual = predicted[mask] - target[mask]
+        primary = problem_group_regression_metrics(
+            target[mask], predicted[mask], groups[mask], include_r2=False
+        )
+        condition_row = regression_metrics(target[mask], predicted[mask], include_r2=False)
         rows.append(
             {
                 "participant_count_n": int(count),
                 "rows": int(np.sum(mask)),
                 "structural_groups": int(np.unique(groups[mask]).size),
-                "mae": float(np.mean(np.abs(residual))),
-                "rmse": float(np.sqrt(np.mean(np.square(residual)))),
-                "mean_bias": float(np.mean(residual)),
+                "problem_group_mae": primary["mae"],
+                "problem_group_rmse": primary["rmse"],
+                "problem_group_mean_bias": primary["mean_bias"],
+                "condition_row_mae": condition_row["mae"],
+                "condition_row_rmse": condition_row["rmse"],
+                "condition_row_mean_bias": condition_row["mean_bias"],
                 **clustered_error_interval(
                     target[mask],
                     predicted[mask],
@@ -435,7 +462,7 @@ def _plot_regimes(rows: list[dict[str, Any]]) -> None:
     figure, axes = plt.subplots(2, 2, figsize=(12, 9))
     for axis, dimension in zip(axes.flat, dimensions, strict=True):
         selected = [row for row in rows if row["dimension"] == dimension]
-        values = np.asarray([row["mae"] for row in selected])
+        values = np.asarray([row["problem_group_mae"] for row in selected])
         lower = values - np.asarray([row["mae_ci_lower"] for row in selected])
         upper = np.asarray([row["mae_ci_upper"] for row in selected]) - values
         positions = np.arange(len(selected))
@@ -451,7 +478,7 @@ def _plot_regimes(rows: list[dict[str, Any]]) -> None:
         axis.set_yticks(positions, labels)
         axis.invert_yaxis()
         axis.set_title(dimension.replace("_", " "))
-        axis.set_xlabel("Validation MAE")
+        axis.set_xlabel("Equal-problem outer OOF MAE")
         axis.tick_params(axis="y", labelsize=8)
     figure.suptitle("Error by behavioral regime (95% structural-group bootstrap intervals)")
     figure.tight_layout()
@@ -461,7 +488,7 @@ def _plot_regimes(rows: list[dict[str, Any]]) -> None:
 
 def _plot_participant_counts(rows: list[dict[str, Any]]) -> None:
     counts = np.asarray([row["participant_count_n"] for row in rows])
-    mae = np.asarray([row["mae"] for row in rows])
+    mae = np.asarray([row["problem_group_mae"] for row in rows])
     lower = mae - np.asarray([row["mae_ci_lower"] for row in rows])
     upper = np.asarray([row["mae_ci_upper"] for row in rows]) - mae
     sample_rows = np.asarray([row["rows"] for row in rows])
@@ -476,7 +503,7 @@ def _plot_participant_counts(rows: list[dict[str, Any]]) -> None:
         capsize=3,
     )
     axis.set_xlabel("Participant count n")
-    axis.set_ylabel("Validation MAE")
+    axis.set_ylabel("Equal-problem outer OOF MAE")
     axis.set_title("Error and validation support by participant count")
     support_axis = axis.twinx()
     support_axis.bar(counts, sample_rows, alpha=0.16, color="#777777")
@@ -521,6 +548,8 @@ def _write_rows(path: Path, rows: list[dict[str, Any]]) -> None:
 def write_error_report(statistics: dict[str, Any]) -> None:
     """Generate the systematic error report from executed analysis artifacts."""
     overall = statistics["overall_metrics"]
+    overall_primary = overall["problem_group_equal_weighted"]
+    overall_condition_row = overall["condition_row_unweighted"]
     counts = statistics["special_case_counts"]
     correlations = statistics["participant_count_relationship"]
     config = statistics["config"]
@@ -529,45 +558,50 @@ def write_error_report(statistics: dict[str, Any]) -> None:
     representatives = [
         row for row in statistics["representative_failures"] if row["category_rank"] == 1
     ]
-    highest_regimes = sorted(regimes, key=lambda row: row["mae"], reverse=True)[:5]
+    highest_regimes = sorted(regimes, key=lambda row: row["problem_group_mae"], reverse=True)[:5]
     consistently_higher = [
-        row for row in regimes if row["mae"] > overall["mae"] and row["rmse"] > overall["rmse"]
+        row
+        for row in regimes
+        if row["problem_group_mae"] > overall_primary["mae"]
+        and row["problem_group_rmse"] > overall_primary["rmse"]
     ]
     lines = [
         "# Systematic model error analysis",
         "",
         (
-            "This report analyzes the selected Random Forest on the grouped validation split. "
-            "The locked test split was not inspected. Differences are descriptive predictive "
+            "This report analyzes complete nested outer out-of-fold predictions. "
+            "No partition is described as a confirmatory holdout. Differences are descriptive "
+            "predictive "
             "patterns, not causal effects or explanations of participant behavior."
         ),
         "",
         "## Summary",
         "",
         (
-            f"Overall validation MAE was **{overall['mae']:.4f}**, RMSE was "
-            f"**{overall['rmse']:.4f}**, and mean bias was "
-            f"**{overall['mean_bias']:+.4f}** across "
+            f"Primary equal-structural-group outer OOF MAE was "
+            f"**{overall_primary['mae']:.4f}** across "
+            f"{statistics['validation_structural_groups']:,} groups. Secondary condition-row "
+            f"MAE was **{overall_condition_row['mae']:.4f}** across "
             f"{statistics['validation_rows']:,} rows."
         ),
         (
             f"The absolute EV threshold for an extreme case was "
             f"**{statistics['extreme_ev_threshold']:.3f}**, calculated as the configured "
-            f"{config['extreme_ev_training_absolute_quantile']:.0%} quantile using training "
-            "predictors only."
+            f"{config['extreme_ev_development_absolute_quantile']:.0%} quantile using "
+            "development predictors."
         ),
         "",
         "The five regimes with the largest descriptive MAE were: "
         + ", ".join(
             f"{row['dimension'].replace('_', ' ')}/{row['level'].replace('_', ' ')} "
-            f"({row['mae']:.4f})"
+            f"({row['problem_group_mae']:.4f})"
             for row in highest_regimes
         )
         + ". Overlapping bootstrap intervals mean small differences should not be treated as "
         "clear population differences.",
         "",
         (
-            "Regimes above the overall error on both MAE and RMSE were: "
+            "Regimes above the overall equal-problem error on both MAE and RMSE were: "
             + ", ".join(
                 f"{row['dimension'].replace('_', ' ')}/{row['level'].replace('_', ' ')}"
                 for row in consistently_higher
@@ -603,20 +637,22 @@ def write_error_report(statistics: dict[str, Any]) -> None:
             "## Behavioral regimes",
             "",
             (
-                "Intervals below resample rows sharing a structural fingerprint as one "
-                "cluster within each behavioral slice."
+                "Intervals below resample structural groups and give every sampled group equal "
+                "total weight within each behavioral slice."
             ),
             "",
-            "| Dimension | Regime | Rows | MAE | 95% MAE interval | RMSE | Bias |",
+            "| Dimension | Regime | Rows | Groups | Problem-group MAE | 95% MAE interval | "
+            "Condition-row MAE |",
             "|---|---|---:|---:|---:|---:|---:|",
         ]
     )
     for row in regimes:
         lines.append(
             f"| {row['dimension'].replace('_', ' ')} | {row['level'].replace('_', ' ')} | "
-            f"{row['rows']:,} | {row['mae']:.4f} | "
+            f"{row['rows']:,} | {row['structural_groups']:,} | "
+            f"{row['problem_group_mae']:.4f} | "
             f"[{row['mae_ci_lower']:.4f}, {row['mae_ci_upper']:.4f}] | "
-            f"{row['rmse']:.4f} | {row['mean_bias']:+.4f} |"
+            f"{row['condition_row_mae']:.4f} |"
         )
     lines.extend(
         [
@@ -678,7 +714,7 @@ def write_error_report(statistics: dict[str, Any]) -> None:
             "## Interpretation limits",
             "",
             "- This is post-selection analysis on validation data; it is exploratory and does "
-            "not replace evaluation on the still-locked test split.",
+            "are exploratory generalization diagnostics, not independent confirmatory evidence.",
             "- Regimes overlap, so their error differences are not independent effects. The "
             "bootstrap intervals quantify group-resampling variation, not causal uncertainty.",
             "- The extreme-EV threshold uses raw payoff units and is therefore scale-dependent.",
@@ -697,9 +733,8 @@ def write_error_report(statistics: dict[str, Any]) -> None:
             "",
             (
                 "Complete machine-readable tables are stored in "
-                "`artifacts/analysis/errors/`. The report should be read as validation "
-                "error analysis after model selection, not as untouched confirmatory "
-                "test evidence."
+                "`artifacts/analysis/errors/`. The report uses outer OOF errors from the "
+                "nested selection procedure and is not untouched confirmatory evidence."
             ),
         ]
     )
@@ -711,41 +746,62 @@ def run_error_analysis(
     raw_dir: Path = DEFAULT_DESTINATION,
     manifest_path: Path = DEFAULT_MANIFEST,
     config_path: Path = DEFAULT_CONFIG,
+    *,
+    allow_dirty: bool = False,
 ) -> dict[str, Any]:
-    """Execute and persist validation-only systematic model error analysis."""
+    """Execute systematic error analysis from complete nested outer OOF predictions."""
+    provenance = start_run_provenance(
+        experiment_name="error_analysis_nested_outer_oof",
+        config_paths=[config_path],
+        configuration_values={
+            "model_experiment": str(MODEL_SELECTION_DIR),
+            "allow_dirty": allow_dirty,
+        },
+        dataset_manifest_path=manifest_path,
+        raw_dir=raw_dir,
+        fold_specification_identifier="nested_grouped_cv_v1",
+        entry_module=Path(__file__),
+        allow_dirty=allow_dirty,
+    )
+    upstream_artifacts = [
+        DEFAULT_MODEL_METRICS,
+        DEFAULT_MODEL_PREDICTIONS,
+        DEFAULT_FEATURE_NAMES,
+        DEFAULT_ENGINEERED_FEATURES,
+    ]
+    validate_upstream_artifacts(DEFAULT_MODEL_PROVENANCE, upstream_artifacts)
     config = load_error_config(config_path)
     validation_summary = load_and_validate(raw_dir, manifest_path)
     model_metrics = json.loads(DEFAULT_MODEL_METRICS.read_text(encoding="utf-8"))
     feature_document = json.loads(DEFAULT_FEATURE_NAMES.read_text(encoding="utf-8"))
     if model_metrics["experiment_name"] != config["selected_model_experiment"]:
         raise ValueError("Error config refers to a different model-selection experiment")
-    if model_metrics["test_rows_predicted"] != 0 or model_metrics["test_metrics_computed"]:
-        raise ValueError("Selected-model experiment does not preserve the locked test contract")
-    if sha256_file(DEFAULT_ASSIGNMENTS) != model_metrics["split_assignments_sha256"]:
-        raise ValueError("Split assignment hash differs from model-selection metadata")
+    if model_metrics["evaluation_design"] != "nested_grouped_cv_v1":
+        raise ValueError("Error analysis requires a nested grouped-CV experiment")
+    if model_metrics["headline_source"] != "complete_outer_out_of_fold_predictions":
+        raise ValueError("Error analysis requires complete outer OOF predictions")
 
     selections = load_selections(raw_dir / "c13k_selections.csv")
     problems = load_problems(raw_dir / "c13k_problems.json", selections)
-    assignments = _read_assignments(DEFAULT_ASSIGNMENTS, len(selections))
-    train_indices, validation_indices = partition_indices(assignments)
     feature_names = feature_document["feature_names"]
     features = _read_engineered_features(DEFAULT_ENGINEERED_FEATURES, feature_names)
-    selected_model = model_metrics["selected_model"]
-    predictions = _read_saved_predictions(
-        DEFAULT_MODEL_PREDICTIONS, selected_model, validation_indices
+    oof = read_complete_outer_oof_predictions(
+        DEFAULT_MODEL_PREDICTIONS,
+        expected_rows=len(selections),
     )
-    target = np.asarray([selections[index].brate for index in validation_indices])
-    participant_counts = np.asarray([selections[index].n for index in validation_indices])
-    groups = np.asarray(
-        [assignments[index]["structural_fingerprint"] for index in validation_indices]
-    )
-    validation_features = features[validation_indices]
+    selected_model = "inner_selected_procedure"
+    validation_indices = oof["row_index"]
+    predictions = oof["predictions"]
+    target = oof["target"]
+    participant_counts = oof["participant_counts"]
+    groups = oof["groups"]
+    validation_features = features
     position = {name: index for index, name in enumerate(feature_names)}
-    training_ev = features[train_indices, position["expected_value_difference_b_minus_a_oracle"]]
+    training_ev = features[:, position["expected_value_difference_b_minus_a_oracle"]]
     extreme_ev_threshold = float(
-        np.quantile(np.abs(training_ev), config["extreme_ev_training_absolute_quantile"])
+        np.quantile(np.abs(training_ev), config["extreme_ev_development_absolute_quantile"])
     )
-    participant_median = float(np.median([selections[index].n for index in train_indices]))
+    participant_median = float(np.median([row.n for row in selections]))
     masks = regime_masks(
         validation_features,
         feature_names,
@@ -795,7 +851,7 @@ def run_error_analysis(
         extreme_ev_threshold=extreme_ev_threshold,
         half_half_width=config["approximately_half_half_width"],
     )
-    overall = regression_metrics(target, predictions)
+    overall = evaluate_brate_predictions(target, predictions, groups, participant_counts)
     statistics: dict[str, Any] = {
         "analysis_name": config["analysis_name"],
         "generated_at_utc": datetime.now(UTC).isoformat(),
@@ -810,17 +866,17 @@ def run_error_analysis(
         "selected_model": selected_model,
         "model_metrics_sha256": sha256_file(DEFAULT_MODEL_METRICS),
         "model_predictions_sha256": sha256_file(DEFAULT_MODEL_PREDICTIONS),
-        "split_assignments_sha256": model_metrics["split_assignments_sha256"],
-        "analysis_split": "validation",
+        "fold_assignments_sha256": model_metrics["fold_assignment_sha256"],
+        "analysis_split": "complete_nested_outer_oof",
         "validation_rows": int(validation_indices.size),
         "validation_structural_groups": int(np.unique(groups).size),
         "test_rows_predicted": 0,
         "test_metrics_computed": False,
         "overall_metrics": overall,
         "extreme_ev_threshold": extreme_ev_threshold,
-        "extreme_ev_threshold_source": "training absolute EV-difference quantile",
+        "extreme_ev_threshold_source": "development-data absolute EV-difference quantile",
         "participant_count_median": participant_median,
-        "participant_count_median_source": "training rows",
+        "participant_count_median_source": "development rows",
         "participant_count_relationship": participant_relationship,
         "special_case_counts": {
             "ambiguity_rows": int(np.sum(masks["ambiguity"]["ambiguous_b"])),
@@ -875,6 +931,20 @@ def run_error_analysis(
         json.dumps(statistics, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+    finalize_run_provenance(
+        provenance,
+        fold_artifacts={
+            "outer_assignments": DEFAULT_OUTER_ASSIGNMENTS,
+            "inner_assignments": DEFAULT_INNER_ASSIGNMENTS,
+            "fold_summary": DEFAULT_FOLD_SUMMARY,
+        },
+        input_artifacts=[
+            DEFAULT_MODEL_PROVENANCE,
+            *upstream_artifacts,
+        ],
+        output_artifacts=[DEFAULT_STATISTICS, *output_paths],
+        output_path=DEFAULT_PROVENANCE,
+    )
     return statistics
 
 
@@ -884,11 +954,19 @@ def main() -> None:
     parser.add_argument("--raw-dir", type=Path, default=DEFAULT_DESTINATION)
     parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow a clearly marked non-official run from a dirty worktree.",
+    )
     args = parser.parse_args()
-    statistics = run_error_analysis(args.raw_dir, args.manifest, args.config)
+    statistics = run_error_analysis(
+        args.raw_dir, args.manifest, args.config, allow_dirty=args.allow_dirty
+    )
     print(
-        f"Error analysis complete: {statistics['validation_rows']:,} validation rows; "
-        f"MAE={statistics['overall_metrics']['mae']:.6f}"
+        f"Error analysis complete: {statistics['validation_rows']:,} outer OOF rows; "
+        "problem-group MAE="
+        f"{statistics['overall_metrics']['problem_group_equal_weighted']['mae']:.6f}"
     )
     print(
         "Largest absolute error: "

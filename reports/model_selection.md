@@ -1,5 +1,8 @@
 # Model comparison and selection
 
+> **Stale development-era artifact.** This report predates nested grouped CV and must not be used
+> for headline performance or model selection. Regenerate from complete outer OOF predictions.
+
 This report was generated from the grouped training/validation experiment. The locked test partition was neither predicted nor evaluated.
 
 ## Comparison

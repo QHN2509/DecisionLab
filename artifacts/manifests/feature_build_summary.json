@@ -35,9 +35,14 @@
     "bRate",
     "bRate_std",
     "n",
-    "Block"
+    "Block",
+    "problem",
+    "row_index",
+    "structural_fingerprint",
+    "outer_fold",
+    "inner_fold"
   ],
-  "generated_at_utc": "2026-08-28T01:24:09.170785+00:00",
+  "generated_at_utc": "2026-08-30T15:07:04.756085+00:00",
   "identifier_columns_not_features": [
     "row_index",
     "problem"
@@ -314,6 +319,58 @@
       }
     },
     "forbidden_raw_fields": [],
+    "metamorphic_invariance": {
+      "comparisons": 72840,
+      "engineered_predictor_changes": 0,
+      "fields_checked": [
+        "problem",
+        "n",
+        "block",
+        "bRate",
+        "bRate_std"
+      ],
+      "method": "exact_metamorphic_forbidden_field_mutation",
+      "rows_checked": 14568,
+      "status": "PASS"
+    },
+    "production_input_contract": {
+      "forbidden_fields_unrepresentable": [
+        "Block",
+        "Problem",
+        "bRate",
+        "bRate_std",
+        "block",
+        "brate",
+        "brate_std",
+        "inner_fold",
+        "n",
+        "outer_fold",
+        "problem",
+        "row_index",
+        "structural_fingerprint"
+      ],
+      "problem_fields": [
+        "gamble_a",
+        "gamble_b"
+      ],
+      "problem_type": "ProblemFeatureInput",
+      "record_fields": [
+        "amb",
+        "corr",
+        "feedback",
+        "ha",
+        "hb",
+        "la",
+        "lb",
+        "lot_num_b",
+        "lot_shape_b",
+        "pha",
+        "phb"
+      ],
+      "record_type": "RawFeatureRow",
+      "runtime_type_enforcement": true,
+      "status": "PASS"
+    },
     "raw_feature_count": 11,
     "status": "PASS"
   },
@@ -329,7 +386,7 @@
   "outputs": {
     "data/processed/choices13k_engineered_features.csv": "52b0d41899860e7ffe6f590fc02f62ffaf7592113f0b25d4858c6f195145e3b4",
     "data/processed/choices13k_raw_features.csv": "ae79f8fc0b5fdee3283bbf025a07b100ae5f14ff9c20600082c541a936ccebe4",
-    "docs/features.md": "8c4a86314da08103496e4055f181ea0dd49b6f15ceba447c51a545c9ca3c5ef3"
+    "docs/features.md": "c140fe0a6412ab9d437929a6125b8327d0857c9d468ff43dbf89064ad093a402"
   },
   "raw_feature_columns": [
     "feedback",

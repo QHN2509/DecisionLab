@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
 import pytest
 
 from decisionlab.data.validation import SelectionRecord
 from decisionlab.evaluation.splitting import (
+    InnerFoldAssignment,
+    OuterFoldAssignment,
     SplitAssignment,
     audit_grouped_assignments,
+    audit_nested_fold_assignments,
     create_grouped_assignments,
+    create_nested_fold_assignments,
     ordinary_row_split_leakage_demo,
     structural_fingerprint,
 )
@@ -177,3 +182,40 @@ def test_assignment_audit_rejects_cross_partition_group_leakage() -> None:
 
     with pytest.raises(ValueError, match="Split leakage detected"):
         audit_grouped_assignments(assignments)
+
+
+def test_nested_folds_keep_groups_isolated_and_cover_each_outer_test_once() -> None:
+    groups = np.asarray([f"group-{index // 2}" for index in range(60)])
+    outer, inner = create_nested_fold_assignments(
+        np.arange(60),
+        groups,
+        outer_folds=5,
+        inner_folds=4,
+        outer_seed=17,
+        inner_seed=23,
+    )
+
+    audit = audit_nested_fold_assignments(outer, inner, outer_folds=5, inner_folds=4)
+
+    assert audit["status"] == "PASS"
+    assert audit["outer_group_overlap_count"] == 0
+    assert audit["inner_group_overlap_count"] == 0
+    assert [row.row_index for row in outer] == list(range(60))
+    assert all(
+        len({row.outer_fold for row in outer if row.structural_fingerprint == group}) == 1
+        for group in np.unique(groups)
+    )
+
+
+def test_nested_audit_rejects_outer_test_row_inside_inner_cv() -> None:
+    outer = [
+        OuterFoldAssignment(0, 1, "a", 0),
+        OuterFoldAssignment(1, 2, "b", 1),
+    ]
+    inner = [
+        InnerFoldAssignment(0, 0, "a", 0),
+        InnerFoldAssignment(1, 0, "a", 0),
+    ]
+
+    with pytest.raises(ValueError, match="Inner validation assignments"):
+        audit_nested_fold_assignments(outer, inner, outer_folds=2, inner_folds=1)

@@ -54,6 +54,32 @@ def test_clustered_error_interval_is_deterministic_and_valid() -> None:
     assert first["mae_ci_upper"] >= np.mean(np.abs(predicted - target))
 
 
+def test_clustered_error_interval_gives_sampled_groups_equal_weight() -> None:
+    target = np.zeros(3)
+    predicted = np.asarray([0.0, 0.0, 1.0])
+    groups = np.asarray(["paired", "paired", "singleton"])
+    repeats = 20
+    confidence_level = 0.8
+    random_seed = 9
+
+    interval = clustered_error_interval(
+        target,
+        predicted,
+        groups,
+        repeats=repeats,
+        confidence_level=confidence_level,
+        random_seed=random_seed,
+    )
+    rng = np.random.default_rng(random_seed)
+    group_losses = np.asarray([0.0, 1.0])
+    bootstrap = np.asarray(
+        [np.mean(group_losses[rng.integers(0, 2, size=2)]) for _ in range(repeats)]
+    )
+
+    assert interval["mae_ci_lower"] == pytest.approx(np.quantile(bootstrap, 0.1))
+    assert interval["mae_ci_upper"] == pytest.approx(np.quantile(bootstrap, 0.9))
+
+
 def test_regime_masks_cover_each_partition_without_overlap() -> None:
     features = np.asarray(
         [
@@ -98,7 +124,7 @@ def test_participant_count_analysis_finds_constructed_relationship() -> None:
     )
 
     assert [row["participant_count_n"] for row in rows] == [10, 20, 30]
-    assert rows[0]["mae"] < rows[-1]["mae"]
+    assert rows[0]["problem_group_mae"] < rows[-1]["problem_group_mae"]
     assert relationships["pearson_n_vs_absolute_error"] > 0.9
     assert relationships["spearman_n_vs_absolute_error"] > 0.9
 

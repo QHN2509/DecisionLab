@@ -50,6 +50,7 @@ class PredictionBundle:
     selected_model: str
     validation_mae: float
     validation_rmse: float
+    validation_metric_scope: str
     oracle_feature_count: int
     source_commit: str
 
@@ -111,7 +112,13 @@ def load_prediction_bundle(
     if behavioral["selected_pipeline_sha256"] != expected_hash:
         raise ValueError("Behavioral interpretation refers to a different selected pipeline")
     selected = metrics["selected_model"]
-    selected_metrics = metrics["candidates"][selected]["validation_metrics"]["unweighted"]
+    validation_metrics = metrics["candidates"][selected]["validation_metrics"]
+    if "problem_group_equal_weighted" in validation_metrics:
+        selected_metrics = validation_metrics["problem_group_equal_weighted"]
+        validation_metric_scope = "equal-structural-group"
+    else:
+        selected_metrics = validation_metrics["unweighted"]
+        validation_metric_scope = "legacy condition-row"
     return PredictionBundle(
         pipeline=joblib.load(pipeline_path),
         feature_names=feature_names,
@@ -120,6 +127,7 @@ def load_prediction_bundle(
         selected_model=selected,
         validation_mae=selected_metrics["mae"],
         validation_rmse=selected_metrics["rmse"],
+        validation_metric_scope=validation_metric_scope,
         oracle_feature_count=metrics["oracle_feature_count"],
         source_commit=metrics["source_commit"],
     )

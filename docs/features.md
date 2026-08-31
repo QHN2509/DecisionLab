@@ -1,6 +1,7 @@
 # Behavioral feature reference
 
 This document is generated from `FEATURE_DEFINITIONS` by `decisionlab-build-features`. Engineered predictors are separate from the raw predictor table. `row_index` and `problem` appear in output files only as join/grouping keys and must not be model inputs. No feature uses `bRate`, `bRate_std`, `n`, or `Block`.
+The production feature function accepts only `RawFeatureRow` and `ProblemFeatureInput`. These types cannot represent targets, participant counts, blocks, identifiers, structural fingerprints, or fold metadata. Passing a full selection record is rejected at runtime.
 
 ## Feature contracts
 

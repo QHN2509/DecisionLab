@@ -61,10 +61,10 @@ Do not claim these checks pass unless they were executed successfully in the cur
 - Pin dependencies and record Python/package versions, random seeds, source-data checksum, configuration, split ID, code revision, and run timestamp.
 - Use grouped cross-validation on development data and evaluate the locked test set only after model selection.
 - Compare models on identical folds and report uncertainty using problem-grouped resampling where appropriate.
-- Use unweighted MAE as the primary validation metric. Treat participant-count-weighted metrics as sensitivity analyses, not replacements for problem-level evaluation.
+- Use equal-structural-problem-group MAE as the primary validation metric: average loss within each structural group, then average groups equally. Treat condition-row and participant-count-weighted metrics as secondary analyses.
 - Generate tables and figures from saved run artifacts. Never hand-enter or invent metrics.
 - Every reported metric must be traceable to an actually executed experiment, including the dataset hash, split, configuration, and output artifact.
-- Clearly distinguish primary unweighted problem-level metrics from weighted or stress-test results.
+- Clearly distinguish primary equal-problem metrics from condition-row, participant-weighted, or stress-test results.
 
 ## Research Claims and Documentation
 

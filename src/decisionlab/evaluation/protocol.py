@@ -1,4 +1,4 @@
-"""Create and document the locked DecisionLab evaluation partitions."""
+"""Reproduce historical development-era partitions; not canonical evaluation."""
 
 from __future__ import annotations
 
@@ -29,14 +29,14 @@ from decisionlab.evaluation.splitting import (
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_CONFIG = PROJECT_ROOT / "configs" / "evaluation.json"
+DEFAULT_CONFIG = PROJECT_ROOT / "configs" / "historical_partitions.json"
 DEFAULT_ASSIGNMENTS = PROJECT_ROOT / "data" / "processed" / "choices13k_splits.csv"
 DEFAULT_SUMMARY = PROJECT_ROOT / "artifacts" / "manifests" / "split_summary.json"
-DEFAULT_DOCUMENTATION = PROJECT_ROOT / "docs" / "evaluation_protocol.md"
+DEFAULT_DOCUMENTATION = PROJECT_ROOT / "docs" / "historical_partitions.md"
 
 
 def load_evaluation_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
-    """Load and validate the locked split and metric protocol."""
+    """Load the historical partition contract retained only for provenance."""
     with path.open(encoding="utf-8") as source:
         config = json.load(source)
     required = {
@@ -59,8 +59,8 @@ def load_evaluation_config(path: Path = DEFAULT_CONFIG) -> dict[str, Any]:
         raise ValueError("Evaluation fractions must be positive numbers")
     if not abs(sum(fractions) - 1.0) < 1e-12:
         raise ValueError("Evaluation fractions must sum to one")
-    if config["primary_metric"] != "mae":
-        raise ValueError("The locked primary metric must be unweighted MAE")
+    if config["primary_metric"] != "problem_group_equal_weighted_mae":
+        raise ValueError("Historical primary metric must be equal-structural-group MAE")
     return config
 
 
@@ -170,7 +170,13 @@ def write_evaluation_protocol(summary: dict[str, Any], path: Path) -> None:
     partitions = summary["partition_summary"]
     config = summary["config"]
     lines = [
-        "# Evaluation protocol",
+        "# Historical development-era partitions",
+        "",
+        (
+            "> **Not canonical evaluation.** Target-aware EDA preceded these partitions. "
+            "They are not an untouched or confirmatory holdout and are superseded by nested "
+            "grouped cross-validation."
+        ),
         "",
         (
             "This protocol was generated before model training from the checksum-validated "
@@ -289,28 +295,28 @@ def write_evaluation_protocol(summary: dict[str, Any], path: Path) -> None:
             "",
             "## Metrics for bRate",
             "",
-            "For rows `i=1,…,N`, let `yᵢ` be observed `bRate` and `ŷᵢ` the prediction.",
+            "For structural problem groups `g=1,…,G`, let each group contain condition rows `i`.",
             "Predictions must be finite and in `[0,1]`; evaluation never clips them silently.",
             "",
-            "### Primary unweighted metric",
+            "### Primary equal-structural-group metric",
             "",
             (
-                "- **MAE:** `mean(|ŷᵢ − yᵢ|)`. This is the locked model-selection metric. "
-                "It is in choice-rate units, treats every problem-condition row equally, "
-                "and is less dominated by a few noisy large errors than squared loss."
+                "- **Problem-group MAE:** first compute mean absolute error within each structural "
+                "problem group, then average those group losses equally. This is the locked "
+                "model-selection metric, so paired condition rows and singleton problems receive "
+                "the same total primary weight."
             ),
             "",
-            "### Secondary unweighted metrics",
+            "### Secondary condition-row metrics",
             "",
             (
-                "- **RMSE:** `sqrt(mean((ŷᵢ − yᵢ)²))`; emphasizes large misses and remains "
-                "in bRate units."
+                "- **Condition-row MAE/RMSE:** ordinary row-level summaries retained for "
+                "comparison with earlier runs; paired problems contribute once per condition row."
             ),
             (
-                "- **R²:** `1 − Σ(ŷᵢ − yᵢ)² / Σ(yᵢ − mean(y))²`; contextualizes "
-                "performance against the evaluation-set mean and may be negative."
+                "- **Condition-row R² and mean bias:** secondary diagnostics computed over "
+                "condition rows; R² may be negative."
             ),
-            "- **Mean bias:** `mean(ŷᵢ − yᵢ)`; positive values indicate systematic overprediction.",
             (
                 "- **Calibration diagnostics:** binned observed-versus-predicted plots plus "
                 "calibration intercept and slope. These are diagnostics, not tuning targets "

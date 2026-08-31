@@ -44,5 +44,6 @@ This validation applies even when the service is called outside Streamlit.
 - Under ambiguity, the selected model still uses analyst-known design
   probabilities. The app labels this as an oracle/design prediction because
   participants did not observe those probabilities.
-- Validation MAE and RMSE describe average dataset-level error. They are not a
-  calibrated prediction interval for a constructed scenario.
+- The displayed validation metric states whether it is the corrected equal-problem
+  estimate or a legacy condition-row estimate. Neither is a calibrated prediction
+  interval for a constructed scenario.

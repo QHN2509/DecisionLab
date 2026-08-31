@@ -173,7 +173,8 @@ def _render_prediction(result, bundle) -> None:
             + ". Treat the prediction as extrapolation."
         )
     st.caption(
-        f"Reference validation performance: MAE {bundle.validation_mae:.3f}, RMSE "
+        f"Reference {bundle.validation_metric_scope} validation performance: "
+        f"MAE {bundle.validation_mae:.3f}, RMSE "
         f"{bundle.validation_rmse:.3f}. These are dataset-level errors, not a calibrated "
         "interval for this scenario."
     )

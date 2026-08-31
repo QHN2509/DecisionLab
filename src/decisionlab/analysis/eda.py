@@ -22,6 +22,10 @@ from decisionlab.data.validation import (
     load_problems,
     load_selections,
 )
+from decisionlab.experiments.provenance import (
+    finalize_run_provenance,
+    start_run_provenance,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 PLOT_CACHE = Path(tempfile.gettempdir()) / "decisionlab-matplotlib-cache"
@@ -38,6 +42,7 @@ DEFAULT_CONFIG = PROJECT_ROOT / "configs" / "eda.json"
 DEFAULT_FIGURES = PROJECT_ROOT / "reports" / "figures"
 DEFAULT_REPORT = PROJECT_ROOT / "reports" / "eda_summary.md"
 DEFAULT_STATISTICS = PROJECT_ROOT / "artifacts" / "manifests" / "eda_statistics.json"
+DEFAULT_PROVENANCE = PROJECT_ROOT / "artifacts" / "manifests" / "eda_provenance.json"
 
 COLORS = {
     "blue": "#2878B5",
@@ -673,8 +678,26 @@ def run_eda(
     figures_dir: Path = DEFAULT_FIGURES,
     report_path: Path = DEFAULT_REPORT,
     statistics_path: Path = DEFAULT_STATISTICS,
+    provenance_path: Path = DEFAULT_PROVENANCE,
+    *,
+    allow_dirty: bool = False,
 ) -> dict[str, Any]:
     """Validate data, execute EDA, and persist figures, statistics, and report."""
+    provenance = start_run_provenance(
+        experiment_name="target_aware_exploratory_data_analysis",
+        config_paths=[config_path],
+        configuration_values={
+            "figures_dir": str(figures_dir),
+            "report_path": str(report_path),
+            "statistics_path": str(statistics_path),
+            "allow_dirty": allow_dirty,
+        },
+        dataset_manifest_path=manifest_path,
+        raw_dir=raw_dir,
+        fold_specification_identifier="not_applicable_target_aware_eda",
+        entry_module=Path(__file__),
+        allow_dirty=allow_dirty,
+    )
     validation = load_and_validate(raw_dir, manifest_path)
     selections = load_selections(raw_dir / "c13k_selections.csv")
     problems = load_problems(raw_dir / "c13k_problems.json", selections)
@@ -700,6 +723,12 @@ def run_eda(
         encoding="utf-8",
     )
     write_report(statistics, figures, report_path)
+    finalize_run_provenance(
+        provenance,
+        fold_artifacts={},
+        output_artifacts=[statistics_path, report_path, *figures],
+        output_path=provenance_path,
+    )
     return statistics
 
 
@@ -712,6 +741,12 @@ def main() -> None:
     parser.add_argument("--figures-dir", type=Path, default=DEFAULT_FIGURES)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     parser.add_argument("--statistics", type=Path, default=DEFAULT_STATISTICS)
+    parser.add_argument("--provenance", type=Path, default=DEFAULT_PROVENANCE)
+    parser.add_argument(
+        "--allow-dirty",
+        action="store_true",
+        help="Allow a clearly marked non-official run from a dirty worktree.",
+    )
     args = parser.parse_args()
     statistics = run_eda(
         args.raw_dir,
@@ -720,6 +755,8 @@ def main() -> None:
         args.figures_dir,
         args.report,
         args.statistics,
+        args.provenance,
+        allow_dirty=args.allow_dirty,
     )
     print(
         f"EDA complete: rows={statistics['target_bRate']['count']:,}; "

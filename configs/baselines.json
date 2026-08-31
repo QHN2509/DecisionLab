@@ -1,6 +1,6 @@
 {
-  "experiment_name": "validation_baselines_v1",
-  "evaluation_split": "validation",
+  "experiment_name": "prediction_baselines_nested_oof_v3",
+  "evaluation_design": "nested_grouped_cv_v1",
   "feature_set": "engineered_design_oracle_v1",
   "random_seed": 20260827,
   "ridge": {
@@ -20,4 +20,3 @@
     "uses_oracle_probabilities_under_ambiguity": true
   }
 }
-
