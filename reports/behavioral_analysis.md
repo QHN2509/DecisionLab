@@ -66,7 +66,7 @@ Participant-count groups use the complete development-data median (`n = 16`), no
 - Permutation importance measures loss of predictive accuracy, not causal importance. Families overlap and must not be added or interpreted as mutually exclusive effects.
 - Donor structural groups are drawn only from the same outer fold. Complete groups move together, engineered dependencies are recomputed, and uncertainty resamples whole structural groups.
 - The feedback block perturbation preserves paired rows. Its estimate may be driven mainly by singleton groups because paired feedback/no-feedback blocks contain the same condition pattern.
-- The condition-sensitivity chart is PDP-like. It updates binary interactions and one-hot sets coherently, but the resulting settings are still synthetic and may be sparsely represented in the data.
+- The condition-sensitivity chart is PDP-like. It updates feedback and ambiguity interactions and the correlation one-hot family coherently, but the resulting settings are still synthetic and may be sparsely represented in the data. Lottery shape is excluded because changing its encoding without rebuilding Gamble B's outcome distribution would be internally inconsistent.
 - Validation-bin relationships combine model behavior with the observed feature distribution; they do not isolate a variable while holding every confounder fixed.
 - Ten features use design-oracle probabilities under ambiguity. Accordingly, ambiguity-related interpretation does not describe a strictly participant-visible prediction setting.
 - SHAP was not run: Permutation importance and behaviorally coherent sensitivity analyses answer the prespecified questions without adding the optional SHAP dependency.

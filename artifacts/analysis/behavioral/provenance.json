@@ -1,5 +1,5 @@
 {
-  "completed_at_utc": "2026-08-31T16:15:02.891555+00:00",
+  "completed_at_utc": "2026-08-31T21:12:34.200785+00:00",
   "configuration": {
     "combined_sha256": "4907ee20751988110bd1d4a1108e65259d3c9a3054907f1f6eb8dadb5d066135",
     "complete_sha256": "7b60edd04b71c371fd3210892428e21da280461497f8a453473cb695be0847f7",
@@ -22,10 +22,10 @@
     "source_repository": "https://github.com/jcpeterson/choices13k"
   },
   "environment": {
-    "combined_sha256": "6f966e2ea0defc8cb8d428021aeae02b8273a7db4b89bcb2442fffcce3d483b7",
-    "environment_sha256": "cfe10f06e13d55f14514f30d64a9b1f0981ca889475199dd2034c147f1e8b46e",
+    "combined_sha256": "78fb5de6d25da965200379d375c53772ce4a239f499d626dd0feb7124fbd18a8",
+    "environment_sha256": "2ada8c84d4fdfe1df343b90bb97b85f16558669f23bb032ce2abba9113949196",
     "files": {
-      "pyproject.toml": "8ab71e76f792c7793ab96a6e01c605b832eefd914aff2894348a417c2bada07e",
+      "pyproject.toml": "26e06aecce51f719aafe7c814f2e1dbe9a9b50f4d6913754e358e47d57f2dfd2",
       "requirements-dev.lock": "fcf3241224b8eebf7465ae2694f79d788c9a15795a7df68d180857ce212ac5b9"
     },
     "runtime": {
@@ -44,7 +44,7 @@
     "identifier": "nested_grouped_cv_v1"
   },
   "git": {
-    "commit_sha": "6dfd5e582da754a1aa02b70c745d6ffc41fad814",
+    "commit_sha": "38287d7eaa041cafd6f2dd1612ed02237d2d97d1",
     "is_dirty": false,
     "status_porcelain": [],
     "worktree_state": "clean"
@@ -66,18 +66,18 @@
   },
   "legacy_artifacts_reused": false,
   "outputs": {
-    "combined_sha256": "a299cd412f902458c4f3f5ea082f07d8c9d8a92dfd96f4cf463ac58fd341b17d",
+    "combined_sha256": "bc6b10d7ab5ddbf57f1d8bac73d074a732d9dd84a93db04031fe860dc78ab97c",
     "files": {
-      "artifacts/analysis/behavioral/condition_sensitivity.csv": "1a54772d0cfe2ceeae2ea3bf03c6207b05f40a7aa96fd30e77e550e07e3ee733",
+      "artifacts/analysis/behavioral/condition_sensitivity.csv": "c1de66c3cc3e70a240e35e5a3cb4f87bd0ccdcdfff3558862b6d5fd163d1e37b",
       "artifacts/analysis/behavioral/error_slices.csv": "157e1a0bc0a082f28568997bd726893ab5a7972144b54efdddc11bc1bc133ef3",
       "artifacts/analysis/behavioral/normative_cases.csv": "4190e12dbd39f4ff8067c960e5f6341f385e4716f9a711d9b6ba249a87392d5f",
       "artifacts/analysis/behavioral/normative_examples.csv": "4b51eecd68a2d567041b6959a650c0c7b7d14ab92816059ff3ba78e7e5aa63dd",
-      "artifacts/analysis/behavioral/permutation_importance_domains.csv": "76191934ee65f5e0f3adb53be36d2ee1819e2382db00586620fbbde6be8fccc5",
-      "artifacts/analysis/behavioral/permutation_importance_features.csv": "50b05a3cf8b77542a80c470e4036b959e6aae27d29f8f88fb3b80310a8448613",
+      "artifacts/analysis/behavioral/permutation_importance_domains.csv": "a9db7e3216dd3e3dd4e2ffd6f1699414a5d3e61dfc89bdf1f0369681ace3461b",
+      "artifacts/analysis/behavioral/permutation_importance_features.csv": "cb8a3351d51feba5d5670c865accc6a3bc78cbf6e9508276a8185076c8ae8e71",
       "artifacts/analysis/behavioral/prediction_relationships.csv": "18504abb2b864c36bf475681dfffce789b893f97279e2532a8eafca14aaa4526",
-      "artifacts/analysis/behavioral/statistics.json": "dc73ee8616347030cd57f3cacd010caa2cbce3fcabe60a2805c48b0c59b158b9",
-      "reports/behavioral_analysis.md": "92ab4b0c77c9c2589398047cbb3f22ec9c586c2a56d30a27e634df74714142f7",
-      "reports/figures/behavioral_condition_sensitivity.png": "5c982aa257e676891a4c553e65f07db4a824b95557e2779fb17eb77147904719",
+      "artifacts/analysis/behavioral/statistics.json": "99376edf795fe84769b89b8bb61f589e2f88b57f9454153649e78cfa8d47a722",
+      "reports/behavioral_analysis.md": "2db1c2d48b81744166688d8362ba34c5edcdf6e202f56056cfc9295766c6fc5d",
+      "reports/figures/behavioral_condition_sensitivity.png": "960159885036c7bf51d1adbadf972eedad8fd99bc66978670edd332c06ea6086",
       "reports/figures/behavioral_error_slices.png": "7ab1c73e96258665d9f022b91de06034c2e6b2e7eb62a173d61e89db82e4e7bf",
       "reports/figures/behavioral_permutation_importance.png": "50de1c50c92546fe46aa59f0df6b80c67fc71e7bf898abb29e1a7b70bfc1180d",
       "reports/figures/behavioral_prediction_relationships.png": "2247d68642a96aa812ac0a3d951830dbe78fe3ac2d598b548ed9cc547c22d197",
@@ -86,10 +86,10 @@
     }
   },
   "pipeline_source": {
-    "combined_sha256": "80e1124a8c8c73bee2ee1ccc66fb14ad6f506d86f450e32f55bbdf1c3bc502be",
+    "combined_sha256": "d12efa34e1f5fcec878fc2b21dc70b1fb894e1f95a100b2e8ffd7a536768cd44",
     "files": {
       "src/decisionlab/__init__.py": "058e17b94fa65db59d3470cc6c6666060b4a613162b7ea568febff816d2c7f77",
-      "src/decisionlab/analysis/behavioral.py": "d1e7231e099bff9bd3f4d6cf0d5e2052f6accec22b25a66750e600103b9a3035",
+      "src/decisionlab/analysis/behavioral.py": "6c11fb2d9a9c7579faa1731a63774fbcee56591d9298b3c71d8c774ef6f8c47a",
       "src/decisionlab/analysis/grouped_permutation.py": "d29d8f716d65101ef5cead8711d4a5b152e4bf7316da157f5b10c8059dd672b6",
       "src/decisionlab/data/fetch.py": "17eec2aa96d61311495cc6bb760331b86290f078e4184a3cd909f0b0ad6467f7",
       "src/decisionlab/data/validation.py": "4d9838b7699822726b65e70e8a6bbceddf54c598e9c32fc390b4bc18b9c9a990",
@@ -100,7 +100,7 @@
       "src/decisionlab/evaluation/splitting.py": "0f9427dd9a827226e7f58b70b93e883f7839f58f3536d5a0f1f0d70a96e70d54",
       "src/decisionlab/experiments/baselines.py": "ab39bf64c48cd219442b7f4a563cab81c5f1febe6e13585ed6c827ae2dee53eb",
       "src/decisionlab/experiments/provenance.py": "11297659a0dc66bf338cd033a96b2a5a94a32a784da8fdcd296b9dd1f56afe45",
-      "src/decisionlab/features/behavioral.py": "302fb516e3dbd0ac84a7528e32bff46728223787f7364b98cd6addb06845460c",
+      "src/decisionlab/features/behavioral.py": "3c734fd67493c0099ec1b9a4dfedb835bde4dd1f1de8232f43d5216625c5df18",
       "src/decisionlab/models/baselines.py": "5a9301fd2bf2157ddc1365dff5e078731b0c513f93f7e2f492d3fb9c7206eefb"
     }
   },
@@ -111,5 +111,5 @@
   },
   "provenance_schema": "decisionlab_run_provenance_v1",
   "run_eligibility": "official_clean_commit",
-  "started_at_utc": "2026-08-31T16:11:12.956585+00:00"
+  "started_at_utc": "2026-08-31T21:08:51.525025+00:00"
 }
