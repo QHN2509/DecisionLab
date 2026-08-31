@@ -8,7 +8,6 @@ import json
 import math
 import tempfile
 from dataclasses import asdict, dataclass, fields, replace
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -995,7 +994,6 @@ def build_feature_tables(
         "dataset": validation["dataset"],
         "source_commit": validation["source_commit"],
         "source_sha256": validation["sha256"],
-        "generated_at_utc": datetime.now(UTC).isoformat(),
         "decisionlab_version": __version__,
         "rows": len(selections),
         "raw_feature_columns": [field.name for field in fields(RawFeatureRow)],
