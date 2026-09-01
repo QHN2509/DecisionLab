@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from decisionlab import __version__
+
 
 @pytest.mark.parametrize(
     "config_path",
@@ -56,6 +58,19 @@ def test_locked_environment_contains_every_direct_dependency() -> None:
     declared = [*project["dependencies"], *project["optional-dependencies"]["dev"]]
 
     assert {requirement.lower() for requirement in declared} <= locked
+
+
+def test_release_version_and_documentation_identify_current_checkpoint() -> None:
+    project = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))["project"]
+    readme = Path("README.md").read_text(encoding="utf-8")
+    releases = Path("docs/releases.md").read_text(encoding="utf-8")
+
+    assert project["version"] == __version__ == "0.2.0"
+    assert "v0.2.0 is the current portfolio-ready release" in readme
+    assert "v0.1.0 is a historical pre-fix checkpoint" in readme
+    assert "v0.2.0 — current portfolio release" in releases
+    assert "v0.1.0 — historical pre-fix checkpoint" in releases
+    assert "Do not use v0.1.0 as the current DecisionLab implementation" in releases
 
 
 def test_readme_quick_and_official_workflows_are_complete_and_ordered() -> None:

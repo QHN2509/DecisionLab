@@ -16,6 +16,17 @@ This is an aggregate prediction task. DecisionLab does **not** predict an
 individual person's choice, infer individual utility, or estimate causal
 effects.
 
+## Release status
+
+**v0.2.0 is the current portfolio-ready release.** It contains the corrected grouped evaluation,
+provenance controls, dependency-preserving behavioral interpretation, clean-clone Streamlit
+bundle, and release documentation described in this repository.
+
+**v0.1.0 is a historical pre-fix checkpoint.** It is retained for project history and should not
+be used as the current implementation or as the source of current methodological claims. Clone
+the default branch or use v0.2.0. See [docs/releases.md](docs/releases.md) for release scope and
+artifact-version details.
+
 ## Why the evaluation is group-based
 
 choices13k contains 14,568 condition rows representing 13,006 decision
