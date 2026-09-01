@@ -65,11 +65,13 @@ def test_release_version_and_documentation_identify_current_checkpoint() -> None
     readme = Path("README.md").read_text(encoding="utf-8")
     releases = Path("docs/releases.md").read_text(encoding="utf-8")
 
-    assert project["version"] == __version__ == "0.2.0"
-    assert "v0.2.0 is the current portfolio-ready release" in readme
-    assert "v0.1.0 is a historical pre-fix checkpoint" in readme
-    assert "v0.2.0 — current portfolio release" in releases
-    assert "v0.1.0 — historical pre-fix checkpoint" in releases
+    assert project["version"] == __version__ == "0.2.1"
+    assert "v0.2.1 is the current portfolio-ready release" in readme
+    assert "v0.1.0 is a historical pre-methodology-fix checkpoint" in readme
+    assert "v0.2.1 — current portfolio release" in releases
+    assert "v0.2.0 — superseded release" in releases
+    assert "v0.2.0 was published before its release metadata was committed" in releases
+    assert "v0.1.0 — historical pre-methodology-fix checkpoint" in releases
     assert "Do not use v0.1.0 as the current DecisionLab implementation" in releases
 
 
